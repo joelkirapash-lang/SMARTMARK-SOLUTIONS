@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- role colour worlds (RGB triplets) ---------- */
+:root, [data-theme="login"], [data-theme="admin"] {
+  /* School admin: deep ocean + teal, sun-gold accent */
+  --b50: 240 253 250; --b100: 204 251 241; --b200: 153 246 228; --b300: 94 234 212; --b400: 45 212 191;
+  --b500: 20 184 166; --b600: 13 148 136; --b700: 15 118 110; --b800: 17 94 89; --b900: 19 78 74;
+  --a400: 251 191 36; --a500: 245 158 11; --a600: 217 119 6;
+  --canvas: 241 248 249; --side: 8 47 73; --side2: 14 80 118;
+}
+[data-theme="super"] {
+  /* Super admin: ultraviolet + fuchsia */
+  --b50: 245 243 255; --b100: 237 233 254; --b200: 221 214 254; --b300: 196 181 253; --b400: 167 139 250;
+  --b500: 139 92 246; --b600: 124 58 237; --b700: 109 40 217; --b800: 91 33 182; --b900: 76 29 149;
+  --a400: 232 121 249; --a500: 217 70 239; --a600: 192 38 211;
+  --canvas: 248 245 255; --side: 30 16 64; --side2: 58 34 112;
+}
+[data-theme="teacher"] {
+  /* Teacher: emerald + lime */
+  --b50: 236 253 245; --b100: 209 250 229; --b200: 167 243 208; --b300: 110 231 183; --b400: 52 211 153;
+  --b500: 16 185 129; --b600: 5 150 105; --b700: 4 120 87; --b800: 6 95 70; --b900: 6 78 59;
+  --a400: 190 242 100; --a500: 132 204 22; --a600: 101 163 13;
+  --canvas: 242 250 246; --side: 6 40 30; --side2: 7 80 60;
+}
+[data-theme="educator"] {
+  /* Educator: ember orange + sky */
+  --b50: 255 247 237; --b100: 255 237 213; --b200: 254 215 170; --b300: 253 186 116; --b400: 251 146 60;
+  --b500: 249 115 22; --b600: 234 88 12; --b700: 194 65 12; --b800: 154 52 18; --b900: 124 45 18;
+  --a400: 56 189 248; --a500: 14 165 233; --a600: 2 132 199;
+  --canvas: 255 248 241; --side: 67 20 7; --side2: 124 45 18;
+}
+[data-theme="student"] {
+  /* Student: rose + sunshine */
+  --b50: 255 241 242; --b100: 255 228 230; --b200: 254 205 211; --b300: 253 164 175; --b400: 251 113 133;
+  --b500: 244 63 94; --b600: 225 29 72; --b700: 190 18 60; --b800: 159 18 57; --b900: 136 19 55;
+  --a400: 253 224 71; --a500: 250 204 21; --a600: 234 179 8;
+  --canvas: 255 245 247; --side: 76 5 25; --side2: 136 19 55;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  font-family: Figtree, system-ui, sans-serif;
+  background: rgb(var(--canvas));
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .3s ease;
+}
+h1, h2, h3, .font-display { font-family: "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -0.015em; }
+::selection { background: rgb(var(--b300)); color: #0f172a; }
+:focus-visible { outline: 2px solid rgb(var(--b500)); outline-offset: 2px; }
+
+.sms-scroll { scrollbar-width: thin; scrollbar-color: rgb(var(--b300)) transparent; }
+.sms-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+.sms-scroll::-webkit-scrollbar-thumb { background: rgb(var(--b300)); border-radius: 8px; }
+
+@keyframes sms-sheet { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sms-sheet { animation: sms-sheet .22s ease-out; }
+@keyframes sms-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.sms-pulse { animation: sms-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .sms-sheet, .sms-pulse { animation: none; } body { transition: none; } }
+
+/* ---------- printing (marklists, report cards, credential slips) ---------- */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  .print-area { box-shadow: none !important; border: 0 !important; margin: 0 !important; max-width: none !important; }
+  .print-break { break-after: page; page-break-after: always; }
+  .print-break:last-child { break-after: auto; page-break-after: auto; }
+  main { padding: 0 !important; }
+}
+
+@media print {
+  body.printing-slips #root { display: none !important; }
+}
