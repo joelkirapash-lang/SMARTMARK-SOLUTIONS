@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Lock, CheckCircle2, Loader2, AlertCircle, PenLine, ClipboardPaste } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Lock, CheckCircle2, Loader2, AlertCircle, PenLine, ClipboardPaste, Upload } from "lucide-react";
 import { api, qs } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { cn, bandStyle, fmtTime } from "../lib/format";
-import { Page, Card, Select, Empty, Spinner, Progress, Badge } from "../components/ui";
+import { Page, Card, Select, Empty, Spinner, Progress, Btn } from "../components/ui";
 
 export default function MarksEntry() {
   const { user } = useAuth();
@@ -100,7 +100,8 @@ export default function MarksEntry() {
   const assignFlex = mine.findIndex((a) => a.grade_id === sel.grade && a.subject_id === sel.subject);
 
   return (
-    <Page title="Marks entry" subtitle="Type or paste a column of scores from Excel. Your work saves automatically.">
+    <Page title="Marks entry" subtitle="Type or paste a column of scores from Excel. Your work saves automatically."
+      actions={<Link to="/app/import"><Btn variant="outline" icon={Upload}>Import from a file</Btn></Link>}>
       <Card>
         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <Select label="Exam" value={sel.exam} onChange={(e) => change({ exam: e.target.value })}>
@@ -128,7 +129,7 @@ export default function MarksEntry() {
         : loadErr ? <Card><Empty icon={AlertCircle} title="You can't open this class" hint={loadErr} /></Card>
         : !rows ? <Spinner /> : (
           <Card pad={false}>
-            <div className="sticky top-16 z-10 bg-white rounded-t-2xl px-4 sm:px-5 py-3 border-b border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="sticky top-16 z-10 bg-surface rounded-t-2xl px-4 sm:px-5 py-3 border-b border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2">
               <div className="flex-1 min-w-[180px]">
                 <div className="flex justify-between text-sm mb-1"><span className="font-semibold">{filled} of {rows.length} entered</span>{mean !== null && <span className="text-slate-600">Class average <b>{mean}%</b></span>}</div>
                 <Progress value={filled} max={rows.length} tone={filled === rows.length && rows.length ? "green" : "brand"} />

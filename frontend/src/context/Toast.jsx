@@ -17,7 +17,7 @@ export function ToastProvider({ children }) {
       {children}
       <div className="fixed bottom-4 inset-x-0 z-[70] flex flex-col items-center gap-2 px-4 pointer-events-none no-print" role="status" aria-live="polite">
         {items.map((i) => (
-          <div key={i.id} className={`sms-sheet pointer-events-auto flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-soft max-w-md w-full sm:w-auto ${i.kind === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
+          <div key={i.id} className={`sms-sheet pointer-events-auto flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-soft max-w-md w-full sm:w-auto ${i.kind === "error" ? "bg-rose-600 text-white" : "bg-zinc-900 text-white"}`}>
             {i.kind === "error" ? <AlertCircle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-brand-300" />}
             <span>{i.text}</span>
           </div>

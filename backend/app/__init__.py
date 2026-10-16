@@ -16,8 +16,8 @@ def create_app(config=Config):
     cors.init_app(app, resources={r"/api/*": {"origins": "*" if origins == "*" else [o.strip() for o in origins.split(",")]}})
 
     from app import models  # noqa: F401
-    from app.routes import auth, super_admin, accounts, academics, exams, marks, analytics, reports, dashboard, misc
-    for m in (auth, super_admin, accounts, academics, exams, marks, analytics, reports, dashboard, misc):
+    from app.routes import auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc
+    for m in (auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc):
         app.register_blueprint(m.bp)
 
     from app.cli import create_superadmin

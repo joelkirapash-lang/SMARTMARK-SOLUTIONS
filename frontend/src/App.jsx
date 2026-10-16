@@ -16,6 +16,7 @@ import Marklist from "./pages/Marklist";
 import Trends from "./pages/Trends";
 import ReportCards from "./pages/ReportCards";
 import Students from "./pages/Students";
+import MarksImport from "./pages/MarksImport";
 
 function Gate({ children, bare }) {
   const { user, loading, suspended, impersonating } = useAuth();
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="remarks" element={<Only roles={ADMIN}><Remarks /></Only>} />
         <Route path="settings" element={<Only roles={ADMIN}><Settings /></Only>} />
         <Route path="marks" element={<Only roles={[...ADMIN, ...STAFF]}><MarksEntry /></Only>} />
+        <Route path="import" element={<Only roles={[...ADMIN, ...STAFF]}><MarksImport /></Only>} />
         <Route path="marklist" element={<Only roles={[...ADMIN, ...STAFF]}><Marklist /></Only>} />
         <Route path="trends" element={<Only roles={[...ADMIN, ...STAFF]}><Trends /></Only>} />
         <Route path="students" element={<Only roles={STAFF}><Students /></Only>} />

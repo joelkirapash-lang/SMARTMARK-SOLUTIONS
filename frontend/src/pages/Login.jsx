@@ -4,6 +4,7 @@ import { Eye, EyeOff, LineChart, ShieldCheck, Smartphone, ScrollText } from "luc
 import { useAuth } from "../context/AuthContext";
 import { Brand } from "../components/Shell";
 import { Btn, Input, ErrorNote } from "../components/ui";
+import { ModeToggle } from "../context/Mode";
 
 export default function Login() {
   const { login, user, loading } = useAuth();
@@ -54,7 +55,8 @@ export default function Login() {
         </div>
         <p className="relative text-sm text-white/50">© {new Date().getFullYear()} SMARTMARK SOLUTIONS</p>
       </aside>
-      <main className="flex flex-col justify-center px-6 py-12 sm:px-12 bg-white">
+      <main className="relative flex flex-col justify-center px-6 py-12 sm:px-12 bg-surface">
+        <div className="absolute top-4 right-4"><ModeToggle /></div>
         <div className="lg:hidden mb-10"><Brand light={false} /></div>
         <form onSubmit={submit} className="w-full max-w-sm mx-auto space-y-5">
           <div>

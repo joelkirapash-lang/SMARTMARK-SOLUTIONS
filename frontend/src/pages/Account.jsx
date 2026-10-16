@@ -6,6 +6,7 @@ import { useToast } from "../context/Toast";
 import { api } from "../lib/api";
 import { ROLE_LABEL, fmtDateTime } from "../lib/format";
 import { Brand } from "../components/Shell";
+import { ModePicker } from "../context/Mode";
 import { Page, Card, Btn, Input, ErrorNote, Avatar, Badge } from "../components/ui";
 
 const RULES = [
@@ -64,7 +65,7 @@ export function ForcedPassword() {
   const nav = useNavigate();
   return (
     <div className="min-h-screen grid place-items-center px-4 py-10 bg-gradient-to-br from-side to-brand-800">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-8 shadow-2xl">
+      <div className="w-full max-w-lg bg-surface rounded-3xl p-8 shadow-2xl">
         <Brand light={false} />
         <h1 className="font-display text-2xl font-semibold mt-6">Choose your own password</h1>
         <p className="text-slate-600 mt-1 mb-6">Hello {user.first_name}. For your security, please replace the temporary password you were given before you continue.</p>
@@ -98,6 +99,7 @@ export function Account() {
         <Card title="Change password">
           {impersonating ? <p className="text-sm text-slate-600">Passwords cannot be changed while viewing as another user.</p> : <PasswordForm />}
         </Card>
+        <Card title="Appearance" className="lg:col-span-2"><ModePicker /></Card>
       </div>
     </Page>
   );

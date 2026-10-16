@@ -138,7 +138,7 @@ export function AdminDashboard() {
           </Card>
         )}
       </div>
-      <Card title="Recent activity" action={<Link to="/app/activity" className="text-sm font-semibold text-brand-700">See all</Link>}><ActivityFeed items={d.activity} /></Card>
+      <Card title="Recent activity" action={<Link to="/app/activity" className="text-sm font-semibold text-brandtext">See all</Link>}><ActivityFeed items={d.activity} /></Card>
     </div>
   );
 }
@@ -166,7 +166,7 @@ export function StaffDashboard() {
       {d.assignments === 0 && <Card><Empty icon={BookOpen} title="No classes assigned yet" hint="Your school administrator decides which grades, streams and subjects you can enter marks for." /></Card>}
       <div className="grid xl:grid-cols-2 gap-6">
         <Card title="Marks to enter"><PendingList items={d.pending} empty="You have entered everything that is open." /></Card>
-        <Card title="How your classes are moving" action={<Link to="/app/trends?mine=1" className="text-sm font-semibold text-brand-700">Details</Link>}>
+        <Card title="How your classes are moving" action={<Link to="/app/trends?mine=1" className="text-sm font-semibold text-brandtext">Details</Link>}>
           {ov.length === 0 ? <Empty icon={TrendingUp} title="No comparisons yet" hint="Once two exams have marks, you'll see which classes improved or slipped." /> : (
             <div className="space-y-4">
               {[["Needs attention", declined, TrendingDown, "text-rose-600"], ["Improving", improved, TrendingUp, "text-emerald-600"]].map(([t, rows, Icon, col]) => rows.length > 0 && (

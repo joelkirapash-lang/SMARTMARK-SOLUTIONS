@@ -131,7 +131,7 @@ export function Schools() {
           {rows.map((s) => {
             const [tone, label] = PAY[s.payment_status] || ["slate", s.payment_status];
             return (
-              <div key={s.id} className={cn("rounded-2xl bg-white shadow-soft ring-1 overflow-hidden", s.is_active ? "ring-slate-900/5" : "ring-amber-400")}>
+              <div key={s.id} className={cn("rounded-2xl bg-surface shadow-soft ring-1 overflow-hidden", s.is_active ? "ring-slate-900/5" : "ring-amber-400")}>
                 <div className={cn("h-1.5", s.is_active ? "bg-gradient-to-r from-brand-500 to-accent-500" : "bg-amber-400")} />
                 <div className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-2">
@@ -242,7 +242,7 @@ export function ViewAs() {
             <div className="lg:w-72"><Select label="School" value={sid} onChange={(e) => setSid(e.target.value)}>{schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select></div>
             <Tabs value={role} onChange={setRole} tabs={ROLES.map(([value, label]) => ({ value, label }))} />
             <div className="relative lg:w-64"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or admission" className="w-full rounded-xl bg-white ring-1 ring-slate-300 pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" /></div>
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or admission" className="w-full rounded-xl bg-surface ring-1 ring-slate-300 pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" /></div>
           </div>
           <Card pad={false}>
             {!users ? <Spinner /> : users.length === 0 ? <Empty title="No accounts here yet" hint="The school admin creates teacher, educator and student accounts." /> : (

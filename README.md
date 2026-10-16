@@ -45,6 +45,19 @@ Flask reads `backend/.env` on its own, so do not `export` it by hand.
 For production, put long random values in `SECRET_KEY` and `JWT_SECRET_KEY`:
 `python -c "import secrets; print(secrets.token_hex(32))"`.
 
+### Importing marks from a file
+
+Open **Import marks** in the sidebar (admins and teachers). Choose the exam and class, download the template
+(it already lists your learners and subjects), fill in the scores, upload it and review the preview. Nothing is saved
+until you confirm. Learners are matched by admission number (or by exact name if there is no admission column).
+Blank cells are left alone, bad cells are reported, and teachers can only import subjects they are assigned to.
+The marklist then ranks everyone from first to last, and the class report cards are one click away.
+
+### Dark and light mode
+
+Use the sun/moon button in the top bar, or **Account and password > Appearance** (Light, Dark or System).
+Printed report cards and marklists are always in light colours.
+
 ### First steps
 
 1. Sign in as Super Admin, open **Schools**, **Add school**, set the learner and staff limits. Copy the admin sign-in details.
@@ -56,10 +69,10 @@ For production, put long random values in `SECRET_KEY` and `JWT_SECRET_KEY`:
 ## Tests
 
 ```bash
-# backend: 12 tests (tenant isolation, roles, limits, suspension, view-as, time handling...)
+# backend: 17 tests (tenant isolation, roles, limits, suspension, view-as, marks import, time handling...)
 cd backend && source venv/bin/activate && python -m pytest -q
 
-# frontend: 39 full-stack tests that render every screen for every role against a live backend
+# frontend: 42 full-stack tests that render every screen for every role against a live backend
 cd backend
 export DATABASE_URL=sqlite:////tmp/e2e.db RATELIMIT_ENABLED=0 PORT=5055
 rm -f /tmp/e2e.db && flask db upgrade

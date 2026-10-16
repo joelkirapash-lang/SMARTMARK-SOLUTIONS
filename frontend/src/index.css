@@ -5,45 +5,66 @@
 /* ---------- role colour worlds (RGB triplets) ---------- */
 :root, [data-theme="login"], [data-theme="admin"] {
   /* School admin: deep ocean + teal, sun-gold accent */
-  --b50: 240 253 250; --b100: 204 251 241; --b200: 153 246 228; --b300: 94 234 212; --b400: 45 212 191;
-  --b500: 20 184 166; --b600: 13 148 136; --b700: 15 118 110; --b800: 17 94 89; --b900: 19 78 74;
+  --l50: 240 253 250; --l100: 204 251 241; --l200: 153 246 228; --l300: 94 234 212; --l400: 45 212 191;
+  --l500: 20 184 166; --l600: 13 148 136; --l700: 15 118 110; --l800: 17 94 89; --l900: 19 78 74;
   --a400: 251 191 36; --a500: 245 158 11; --a600: 217 119 6;
   --canvas: 241 248 249; --side: 8 47 73; --side2: 14 80 118;
 }
 [data-theme="super"] {
   /* Super admin: ultraviolet + fuchsia */
-  --b50: 245 243 255; --b100: 237 233 254; --b200: 221 214 254; --b300: 196 181 253; --b400: 167 139 250;
-  --b500: 139 92 246; --b600: 124 58 237; --b700: 109 40 217; --b800: 91 33 182; --b900: 76 29 149;
+  --l50: 245 243 255; --l100: 237 233 254; --l200: 221 214 254; --l300: 196 181 253; --l400: 167 139 250;
+  --l500: 139 92 246; --l600: 124 58 237; --l700: 109 40 217; --l800: 91 33 182; --l900: 76 29 149;
   --a400: 232 121 249; --a500: 217 70 239; --a600: 192 38 211;
   --canvas: 248 245 255; --side: 30 16 64; --side2: 58 34 112;
 }
 [data-theme="teacher"] {
   /* Teacher: emerald + lime */
-  --b50: 236 253 245; --b100: 209 250 229; --b200: 167 243 208; --b300: 110 231 183; --b400: 52 211 153;
-  --b500: 16 185 129; --b600: 5 150 105; --b700: 4 120 87; --b800: 6 95 70; --b900: 6 78 59;
+  --l50: 236 253 245; --l100: 209 250 229; --l200: 167 243 208; --l300: 110 231 183; --l400: 52 211 153;
+  --l500: 16 185 129; --l600: 5 150 105; --l700: 4 120 87; --l800: 6 95 70; --l900: 6 78 59;
   --a400: 190 242 100; --a500: 132 204 22; --a600: 101 163 13;
   --canvas: 242 250 246; --side: 6 40 30; --side2: 7 80 60;
 }
 [data-theme="educator"] {
   /* Educator: ember orange + sky */
-  --b50: 255 247 237; --b100: 255 237 213; --b200: 254 215 170; --b300: 253 186 116; --b400: 251 146 60;
-  --b500: 249 115 22; --b600: 234 88 12; --b700: 194 65 12; --b800: 154 52 18; --b900: 124 45 18;
+  --l50: 255 247 237; --l100: 255 237 213; --l200: 254 215 170; --l300: 253 186 116; --l400: 251 146 60;
+  --l500: 249 115 22; --l600: 234 88 12; --l700: 194 65 12; --l800: 154 52 18; --l900: 124 45 18;
   --a400: 56 189 248; --a500: 14 165 233; --a600: 2 132 199;
   --canvas: 255 248 241; --side: 67 20 7; --side2: 124 45 18;
 }
 [data-theme="student"] {
   /* Student: rose + sunshine */
-  --b50: 255 241 242; --b100: 255 228 230; --b200: 254 205 211; --b300: 253 164 175; --b400: 251 113 133;
-  --b500: 244 63 94; --b600: 225 29 72; --b700: 190 18 60; --b800: 159 18 57; --b900: 136 19 55;
+  --l50: 255 241 242; --l100: 255 228 230; --l200: 254 205 211; --l300: 253 164 175; --l400: 251 113 133;
+  --l500: 244 63 94; --l600: 225 29 72; --l700: 190 18 60; --l800: 159 18 57; --l900: 136 19 55;
   --a400: 253 224 71; --a500: 250 204 21; --a600: 234 179 8;
   --canvas: 255 245 247; --side: 76 5 25; --side2: 136 19 55;
+}
+
+/* brand scale: pale tints swap with deep shades in dark mode, solid shades never change */
+:root {
+  --b50: var(--l50);
+  --b100: var(--l100);
+  --b200: var(--l200);
+  --b300: var(--l300);
+  --b400: var(--l400);
+  --b500: var(--l500);
+  --b600: var(--l600);
+  --b700: var(--l700);
+  --b800: var(--l800);
+  --b900: var(--l900);
+  --btext: var(--l700);
+}
+html.dark {
+  color-scheme: dark;
+  --b50: var(--l900); --b100: var(--l800); --b200: var(--l700);
+  --btext: var(--l300);
+  --canvas: 9 13 22;
 }
 
 html, body, #root { min-height: 100%; }
 body {
   font-family: Figtree, system-ui, sans-serif;
   background: rgb(var(--canvas));
-  color: #0f172a;
+  color: rgb(var(--slate-900));
   -webkit-font-smoothing: antialiased;
   transition: background-color .3s ease;
 }
@@ -74,3 +95,9 @@ h1, h2, h3, .font-display { font-family: "Bricolage Grotesque", system-ui, sans-
 @media print {
   body.printing-slips #root { display: none !important; }
 }
+
+/* ---------- charts follow the theme ---------- */
+html.dark .recharts-cartesian-grid line { stroke: rgb(var(--slate-200)); }
+html.dark .recharts-cartesian-axis-tick-value { fill: rgb(var(--slate-500)); }
+html.dark .recharts-default-tooltip { background-color: rgb(var(--surface)) !important; border: 1px solid rgb(var(--slate-200)) !important; }
+html.dark .recharts-tooltip-label, html.dark .recharts-tooltip-item { color: rgb(var(--slate-800)) !important; }

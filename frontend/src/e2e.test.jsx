@@ -8,6 +8,7 @@ import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/Toast";
+import { ModeProvider } from "./context/Mode";
 import { tokens } from "./lib/api";
 
 const API = import.meta.env.VITE_API_BASE_URL;
@@ -59,7 +60,7 @@ afterAll(() => { if (consoleErrors.length) console.log("CONSOLE ERRORS:\n" + [..
 function mount(path, token) {
   cleanup(); localStorage.clear();
   if (token) tokens.set(token);
-  return render(<MemoryRouter initialEntries={[path]}><ToastProvider><AuthProvider><App /></AuthProvider></ToastProvider></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[path]}><ModeProvider><ToastProvider><AuthProvider><App /></AuthProvider></ToastProvider></ModeProvider></MemoryRouter>);
 }
 const heading = (re, level = 1) => screen.findByRole("heading", { level, name: re }, { timeout: 15000 });
 
@@ -195,6 +196,32 @@ describe("student", () => {
   it("cannot reach staff pages", async () => {
     mount("/app/marks", W.student);
     expect(await screen.findByText(/Latest average/, {}, { timeout: 15000 })).toBeTruthy();
+  });
+});
+
+describe("import and appearance", () => {
+  it("import marks page opens for admin and for a teacher with only their own grades", async () => {
+    mount("/app/import", W.admin); await heading(/Import marks/);
+    expect(await screen.findByRole("button", { name: /Download the template/ })).toBeTruthy();
+    mount("/app/import", W.teacher); await heading(/Import marks/);
+    const grade = (await screen.findAllByRole("combobox"))[1];
+    expect(await within(grade).findByText("Grade 4")).toBeTruthy();
+    expect(within(grade).queryByText("Grade 5")).toBeNull();
+  });
+  it("marklist and report-card links pre-fill the class", async () => {
+    mount(`/app/marklist?exam=${W.e2.id}&grade=${W.g4.id}&stream=${W.stream.id}`, W.admin);
+    expect(await screen.findByText("Amina Hassan", {}, { timeout: 15000 })).toBeTruthy();
+    mount(`/app/report-cards?exam=${W.e2.id}&grade=${W.g4.id}&stream=${W.stream.id}`, W.admin);
+    expect(await screen.findByRole("button", { name: /Print the whole class/ }, { timeout: 15000 })).toBeTruthy();
+  });
+  it("dark mode can be switched, is remembered, and flips the page", async () => {
+    mount("/app/account", W.admin); await heading(/Account and password/);
+    fireEvent.click(await screen.findByRole("button", { name: /^Dark$/ }));
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(localStorage.getItem("sms_mode")).toBe("dark");
+    fireEvent.click(screen.getByRole("button", { name: /Switch to light mode/ }));
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(localStorage.getItem("sms_mode")).toBe("light");
   });
 });
 

@@ -108,7 +108,7 @@ export function Exams() {
       {!rows ? <Spinner /> : rows.length === 0 ? <Card><Empty icon={FileText} title="No exams yet" hint="Create your first exam to start collecting marks." action={<Btn onClick={() => setF({ ...blankExam })}>Create an exam</Btn>} /></Card> : (
         <div className="grid md:grid-cols-2 2xl:grid-cols-3 gap-4">
           {rows.map((e) => (
-            <div key={e.id} className="bg-white rounded-2xl shadow-soft ring-1 ring-slate-900/5 p-5 flex flex-col gap-3">
+            <div key={e.id} className="bg-surface rounded-2xl shadow-soft ring-1 ring-slate-900/5 p-5 flex flex-col gap-3">
               <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-display font-semibold text-lg truncate">{e.name}</h3>
                 <p className="text-sm text-slate-500">{[e.term, e.exam_date && fmtDate(e.exam_date)].filter(Boolean).join(" · ") || "No date set"}</p></div>
                 <Badge tone={e.is_published ? "green" : "amber"}>{e.is_published ? "Published" : "Open for marks"}</Badge></div>

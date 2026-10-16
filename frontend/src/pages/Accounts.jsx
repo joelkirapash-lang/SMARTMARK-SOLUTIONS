@@ -175,7 +175,7 @@ export default function Accounts() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, admission number or email" className="w-full rounded-xl bg-white ring-1 ring-slate-300 pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" /></div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, admission number or email" className="w-full rounded-xl bg-surface ring-1 ring-slate-300 pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" /></div>
         {role === "STUDENT" && (
           <>
             <div className="sm:w-44"><Select value={gradeId} onChange={(e) => { setGradeId(e.target.value); setStreamId(""); }} aria-label="Grade"><option value="">All grades</option>{grades.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</Select></div>

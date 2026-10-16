@@ -18,7 +18,7 @@ export default function PublicReportCard() {
         {data && <Btn icon={Printer} onClick={() => window.print()}>Print or save as PDF</Btn>}
       </div>
       {!data && !error && <Spinner />}
-      {error && <div className="max-w-md mx-auto bg-white rounded-2xl"><Empty title="This link cannot be opened" hint={error} /></div>}
+      {error && <div className="max-w-md mx-auto bg-surface rounded-2xl"><Empty title="This link cannot be opened" hint={error} /></div>}
       <ReportCardView data={data} />
     </div>
   );

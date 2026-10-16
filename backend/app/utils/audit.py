@@ -5,7 +5,7 @@ LABELS = {
     "LOGIN_SUCCESS": "Signed in", "PASSWORD_CHANGED": "Changed password", "PASSWORD_RESET": "Reset a password",
     "ACCOUNT_CREATED": "Created an account", "ACCOUNTS_BULK_CREATED": "Imported accounts",
     "ACCOUNT_UPDATED": "Updated an account", "ACCOUNT_DISABLED": "Disabled an account",
-    "ACCOUNT_ENABLED": "Re-enabled an account", "MARKS_SAVED": "Saved marks",
+    "ACCOUNT_ENABLED": "Re-enabled an account", "MARKS_SAVED": "Saved marks", "MARKS_IMPORTED": "Imported marks from a file",
     "EXAM_CREATED": "Created an exam", "EXAM_UPDATED": "Updated an exam", "EXAM_PUBLISHED": "Published an exam",
     "EXAM_UNPUBLISHED": "Unpublished an exam", "EXAM_DELETED": "Deleted an exam",
     "SCHOOL_CREATED": "School created", "SCHOOL_UPDATED": "School plan updated",

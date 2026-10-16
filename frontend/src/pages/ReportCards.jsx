@@ -14,7 +14,7 @@ export default function ReportCards() {
   const isAdmin = user.role === "SCHOOL_ADMIN";
   const [sp] = useSearchParams();
   const [grades, setGrades] = useState([]); const [streams, setStreams] = useState([]); const [exams, setExams] = useState([]); const [students, setStudents] = useState([]);
-  const [g, setG] = useState(""); const [s, setS] = useState(""); const [e, setE] = useState(sp.get("exam") || ""); const [stu, setStu] = useState(isStudent ? user.id : sp.get("student") || "");
+  const [g, setG] = useState(sp.get("grade") || ""); const [s, setS] = useState(sp.get("stream") || ""); const [e, setE] = useState(sp.get("exam") || ""); const [stu, setStu] = useState(isStudent ? user.id : sp.get("student") || "");
   const [card, setCard] = useState(null); const [loading, setLoading] = useState(false); const [err, setErr] = useState("");
   const [landscape, setLandscape] = useState(false);
   const [bulk, setBulk] = useState(null); const [link, setLink] = useState(null);

@@ -5,7 +5,7 @@ export default function ReportCardView({ data, className = "" }) {
   if (!data) return null;
   const { school, student, exam, subjects, total, average, position, class_size, overall_band, overall_label } = data;
   return (
-    <article className={cn("print-area bg-white rounded-2xl shadow-soft ring-1 ring-slate-900/5 max-w-3xl mx-auto overflow-hidden", className)}>
+    <article className={cn("print-area bg-surface rounded-2xl shadow-soft ring-1 ring-slate-900/5 max-w-3xl mx-auto overflow-hidden", className)}>
       <div className="h-2 bg-gradient-to-r from-brand-500 via-accent-500 to-brand-700" />
       <div className="p-6 sm:p-10">
         <header className="flex items-start justify-between gap-4 pb-6 border-b-2 border-slate-900">
@@ -64,7 +64,7 @@ export default function ReportCardView({ data, className = "" }) {
           {[["Total", total], ["Average", average === null ? "—" : `${average}%`], ["Position", position ? `${position} of ${class_size}` : "—"],
             ["Overall level", overall_band ? `${overall_band}` : "—"]].map(([k, v]) => (
             <div key={k} className="rounded-xl bg-brand-50 px-4 py-3">
-              <p className="text-xs text-brand-800">{k}</p>
+              <p className="text-xs text-brandtext">{k}</p>
               <p className="font-display text-lg font-semibold text-slate-900 flex items-center gap-1.5">
                 {k === "Position" && position === 1 && <Award size={18} className="text-accent-500" />}{v}
               </p>

@@ -56,7 +56,7 @@ export default function Academics() {
                       <button className="text-slate-400 hover:text-rose-600 p-1" aria-label={`Remove ${g.name}`} onClick={() => window.confirm(`Remove ${g.name}?`) && run(() => api.del(`/grades/${g.id}`), "Grade removed.")}><Trash2 size={16} /></button></div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       {streams.filter((s) => s.grade_id === g.id).map((s) => (
-                        <span key={s.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-800 text-sm font-medium pl-3 pr-1.5 py-1">{s.name}
+                        <span key={s.id} className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brandtext text-sm font-medium pl-3 pr-1.5 py-1">{s.name}
                           <button className="p-0.5 hover:text-rose-600" aria-label={`Remove stream ${s.name}`} onClick={() => run(() => api.del(`/streams/${s.id}`), "Stream removed.")}><Trash2 size={13} /></button></span>
                       ))}
                       <form className="inline-flex gap-1.5" onSubmit={(e) => { e.preventDefault(); run(() => api.post("/streams", { name: stName[g.id], grade_id: g.id }).then(() => setStName({ ...stName, [g.id]: "" })), "Stream added."); }}>
