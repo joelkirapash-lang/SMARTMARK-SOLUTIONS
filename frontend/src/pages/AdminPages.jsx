@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Save, KeyRound, FileText, Pencil, Eye, EyeOff, ArrowRight, MessageSquareQuote } from "lucide-react";
 import { api } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/Toast";
 import { cn, fmtDate, ROLE_LABEL } from "../lib/format";
@@ -83,11 +84,10 @@ export function Access() {
 const blankExam = { name: "", term: "", exam_date: "", marks_deadline: "" };
 export function Exams() {
   const toast = useToast();
-  const [rows, setRows] = useState(null);
+  const { data: rows } = useQuery("/exams");
   const [f, setF] = useState(null);
   const [error, setError] = useState("");
-  const load = useCallback(() => api.get("/exams").then(setRows), []);
-  useEffect(() => { load(); }, [load]);
+  const load = () => {};
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async () => {
     setError("");
@@ -217,61 +217,14 @@ export function Remarks() {
   );
 }
 
-/* ---------------- Settings ---------------- */
-export function Settings() {
-  const { refresh } = useAuth();
-  const toast = useToast();
-  const [f, setF] = useState(null);
-  const [error, setError] = useState("");
-  useEffect(() => { api.get("/school").then(setF); }, []);
-  if (!f) return <Spinner />;
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-  const save = async (e) => {
-    e.preventDefault(); setError("");
-    try { await api.put("/school", f); await refresh(); toast.success("School settings saved."); } catch (x) { setError(x.message); }
-  };
-  return (
-    <Page title="School settings" subtitle="Your name, motto, crest and report card footer appear on every report card.">
-      <div className="grid xl:grid-cols-3 gap-6">
-        <Card className="xl:col-span-2"><form onSubmit={save} className="space-y-4">
-          <ErrorNote error={error} />
-          <Input label="School name" required value={f.name || ""} onChange={set("name")} />
-          <Input label="Motto" value={f.motto || ""} onChange={set("motto")} />
-          <Input label="Crest or logo web address" value={f.crest_url || ""} onChange={set("crest_url")} hint="Paste the link to your crest image." />
-          <Input label="Address" value={f.address || ""} onChange={set("address")} />
-          <div className="grid sm:grid-cols-2 gap-3"><Input label="Contact email" type="email" value={f.contact_email || ""} onChange={set("contact_email")} /><Input label="Contact phone" value={f.contact_phone || ""} onChange={set("contact_phone")} /></div>
-          <div className="grid sm:grid-cols-3 gap-3"><Input label="Current term" value={f.current_term || ""} onChange={set("current_term")} placeholder="Term 2, 2026" />
-            <Input label="Term starts" type="date" value={f.term_start || ""} onChange={set("term_start")} /><Input label="Term ends" type="date" value={f.term_end || ""} onChange={set("term_end")} /></div>
-          <Textarea label="Report card footer" value={f.report_card_footer || ""} onChange={set("report_card_footer")} />
-          <Btn type="submit" icon={Save}>Save settings</Btn>
-        </form></Card>
-        <Card title="Your plan" className="self-start">
-          <dl className="text-sm space-y-2">
-            <div className="flex justify-between"><dt className="text-slate-500">Plan</dt><dd className="font-semibold">{f.plan_name || "Standard"}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Learner limit</dt><dd className="font-semibold">{f.max_students ?? "Unlimited"}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Staff limit</dt><dd className="font-semibold">{f.max_staff ?? "Unlimited"}</dd></div>
-            {f.next_payment_due && <div className="flex justify-between"><dt className="text-slate-500">Next payment</dt><dd className="font-semibold">{fmtDate(f.next_payment_due)}</dd></div>}
-          </dl>
-          <p className="text-xs text-slate-500 mt-4">To change your plan, contact SMARTMARK SOLUTIONS.</p>
-        </Card>
-      </div>
-    </Page>
-  );
-}
-
 /* ---------------- Activity ---------------- */
 export function Activity() {
   const { user } = useAuth();
   const isSuper = user.role === "SUPER_ADMIN";
-  const [items, setItems] = useState(null);
   const [cat, setCat] = useState("all");
-  const [schools, setSchools] = useState([]);
   const [sid, setSid] = useState("");
-  useEffect(() => { if (isSuper) api.get("/super/schools").then(setSchools); }, [isSuper]);
-  useEffect(() => {
-    setItems(null);
-    api.get(isSuper ? `/super/activity${sid ? `?school_id=${sid}` : ""}` : "/activity").then(setItems);
-  }, [isSuper, sid]);
+  const schools = useQuery(isSuper ? "/super/schools" : null).data || [];
+  const { data: items } = useQuery(isSuper ? `/super/activity${sid ? `?school_id=${sid}` : ""}` : "/activity");
   const shown = useMemo(() => (items || []).filter((i) => cat === "all" || i.category === cat), [items, cat]);
   return (
     <Page title={isSuper ? "Platform activity" : user.role === "SCHOOL_ADMIN" ? "Activity" : "My activity"} subtitle="Who did what, and exactly when. Times are shown in your own timezone.">

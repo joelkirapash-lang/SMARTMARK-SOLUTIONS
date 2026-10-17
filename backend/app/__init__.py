@@ -16,9 +16,15 @@ def create_app(config=Config):
     cors.init_app(app, resources={r"/api/*": {"origins": "*" if origins == "*" else [o.strip() for o in origins.split(",")]}})
 
     from app import models  # noqa: F401
-    from app.routes import auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc
-    for m in (auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc):
+    from app.routes import auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc, uploads
+    for m in (auth, super_admin, accounts, academics, exams, marks, marks_import, analytics, reports, dashboard, misc, uploads):
         app.register_blueprint(m.bp)
+
+    try:  # smaller responses = faster screens; the app still runs if this package is missing
+        from flask_compress import Compress
+        Compress(app)
+    except ImportError:
+        pass
 
     from app.cli import create_superadmin
     app.cli.add_command(create_superadmin)
@@ -42,6 +48,10 @@ def create_app(config=Config):
     @app.errorhandler(404)
     def _404(e):
         return jsonify(error="Not found."), 404
+
+    @app.errorhandler(413)
+    def _413(e):
+        return jsonify(error="That file is too large."), 413
 
     @app.errorhandler(429)
     def _429(e):

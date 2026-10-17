@@ -55,6 +55,10 @@ class School(db.Model, Stamp):
     term_start = db.Column(db.Date)
     term_end = db.Column(db.Date)
     report_card_footer = db.Column(db.Text)
+    head_teacher_name = db.Column(db.String(120))
+    head_signature_url = db.Column(db.String(500))
+    stamp_url = db.Column(db.String(500))
+    next_term_begins = db.Column(db.Date)
     # Platform / billing controls (managed by the Super Admin only)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     suspended_reason = db.Column(db.String(500))
@@ -73,6 +77,8 @@ class School(db.Model, Stamp):
             "contact_email": self.contact_email, "contact_phone": self.contact_phone,
             "current_term": self.current_term, "term_start": iso(self.term_start),
             "term_end": iso(self.term_end), "report_card_footer": self.report_card_footer,
+            "head_teacher_name": self.head_teacher_name, "head_signature_url": self.head_signature_url,
+            "stamp_url": self.stamp_url, "next_term_begins": iso(self.next_term_begins),
             "is_active": self.is_active, "suspended_reason": self.suspended_reason,
             "suspended_at": iso(self.suspended_at), "plan_name": self.plan_name,
             "payment_status": self.payment_status, "next_payment_due": iso(self.next_payment_due),
@@ -174,6 +180,8 @@ class User(db.Model, Stamp):
     guardian_name = db.Column(db.String(200))
     guardian_phone = db.Column(db.String(50))
     guardian_email = db.Column(db.String(255))
+    upi_number = db.Column(db.String(50))
+    assessment_number = db.Column(db.String(50))
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
 
     def full_name(self):
@@ -190,6 +198,7 @@ class User(db.Model, Stamp):
             "employee_id": self.employee_id, "home_grade_id": self.home_grade_id,
             "home_stream_id": self.home_stream_id, "admission_number": self.admission_number,
             "grade_id": self.grade_id, "stream_id": self.stream_id, "is_archived": self.is_archived,
+            "upi_number": self.upi_number, "assessment_number": self.assessment_number,
         }
         if full:  # private details are only returned to admins / the user themselves
             d.update({

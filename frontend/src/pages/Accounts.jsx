@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { UserPlus, Upload, Pencil, KeyRound, Ban, CheckCircle2, Search, Download, Users } from "lucide-react";
 import { api, qs } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { useToast } from "../context/Toast";
 import { fmtDateTime, downloadCsv } from "../lib/format";
 import { Page, Card, Btn, Input, Select, Badge, Modal, Empty, Spinner, Tabs, Progress, ErrorNote, Avatar } from "../components/ui";
@@ -17,7 +18,7 @@ function AccountForm({ role, initial, grades, onClose, onSaved }) {
     ...initial, date_of_birth: initial.date_of_birth || "", grade_id: initial.grade_id || "", stream_id: initial.stream_id || "",
     home_grade_id: initial.home_grade_id || "", home_stream_id: initial.home_stream_id || "",
   } : { first_name: "", second_name: "", other_name: "", gender: "", personal_email: "", phone_number: "", admission_number: "", date_of_birth: "",
-    grade_id: "", stream_id: "", guardian_name: "", guardian_phone: "", guardian_email: "", employee_id: "", home_grade_id: "", home_stream_id: "", must_change_password: true });
+    grade_id: "", stream_id: "", guardian_name: "", guardian_phone: "", guardian_email: "", upi_number: "", assessment_number: "", employee_id: "", home_grade_id: "", home_stream_id: "", must_change_password: true });
   const [streams, setStreams] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -59,6 +60,10 @@ function AccountForm({ role, initial, grades, onClose, onSaved }) {
         {role === "STUDENT" && (
           <>
             <Input label="Date of birth" type="date" value={f.date_of_birth} onChange={set("date_of_birth")} />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Input label="UPI number" value={f.upi_number || ""} onChange={set("upi_number")} />
+              <Input label="Assessment number" value={f.assessment_number || ""} onChange={set("assessment_number")} />
+            </div>
             <p className="text-sm font-semibold pt-1">Parent or guardian</p>
             <div className="grid sm:grid-cols-3 gap-3">
               <Input label="Name" value={f.guardian_name || ""} onChange={set("guardian_name")} />
@@ -88,8 +93,8 @@ function BulkModal({ role, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const template = () => downloadCsv(`${SINGULAR[role]}-template.csv`, role === "STUDENT"
-    ? [["first_name", "second_name", "other_name", "admission_number", "gender", "date_of_birth", "grade", "stream", "guardian_name", "guardian_phone", "guardian_email"],
-       ["Amina", "Hassan", "", "1001", "Female", "2014-03-21", "Grade 4", "A", "Fatuma Hassan", "0712345678", ""]]
+    ? [["first_name", "second_name", "other_name", "admission_number", "gender", "date_of_birth", "grade", "stream", "guardian_name", "guardian_phone", "guardian_email", "upi_number", "assessment_number"],
+       ["Amina", "Hassan", "", "1001", "Female", "2014-03-21", "Grade 4", "A", "Fatuma Hassan", "0712345678", "", "", ""]]
     : [["first_name", "second_name", "other_name", "gender", "employee_id", "phone_number", "home_grade", "home_stream"], ["John", "Kamau", "", "Male", "T1234", "0712345678", "Grade 4", "A"]]);
   const go = async () => {
     setBusy(true); setError("");
@@ -129,24 +134,17 @@ export default function Accounts() {
   const [q, setQ] = useState(sp.get("q") || "");
   const [gradeId, setGradeId] = useState("");
   const [streamId, setStreamId] = useState("");
-  const [grades, setGrades] = useState([]);
-  const [streams, setStreams] = useState([]);
-  const [rows, setRows] = useState(null);
-  const [usage, setUsage] = useState(null);
+  const [dq, setDq] = useState(q);
+  useEffect(() => { const t = setTimeout(() => setDq(q), 250); return () => clearTimeout(t); }, [q]);
   const [form, setForm] = useState(null);
   const [bulk, setBulk] = useState(false);
   const [creds, setCreds] = useState(null);
 
-  useEffect(() => { api.get("/grades").then(setGrades); }, []);
-  useEffect(() => { gradeId ? api.get(`/streams${qs({ grade_id: gradeId })}`).then(setStreams) : setStreams([]); }, [gradeId]);
-  const loadUsage = () => api.get("/accounts/usage").then(setUsage);
-  useEffect(() => { loadUsage(); }, []);
-  const load = useCallback(() => {
-    setRows(null);
-    const t = setTimeout(() => api.get(`/accounts${qs({ role, q, grade_id: role === "STUDENT" ? gradeId : "", stream_id: role === "STUDENT" ? streamId : "" })}`).then(setRows), q ? 250 : 0);
-    return () => clearTimeout(t);
-  }, [role, q, gradeId, streamId]);
-  useEffect(load, [load]);
+  const grades = useQuery("/grades").data || [];
+  const streams = useQuery(gradeId ? `/streams${qs({ grade_id: gradeId })}` : null).data || [];
+  const usage = useQuery("/accounts/usage").data || null;
+  const rows = useQuery(`/accounts${qs({ role, q: dq, grade_id: role === "STUDENT" ? gradeId : "", stream_id: role === "STUDENT" ? streamId : "" })}`).data;
+  const loadUsage = () => {}; const load = () => {}; // lists refresh themselves after every save
 
   const after = (c) => { setForm(null); if (c) setCreds(c); load(); loadUsage(); };
   const reset = async (u) => {

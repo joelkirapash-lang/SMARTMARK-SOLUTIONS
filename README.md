@@ -53,6 +53,36 @@ until you confirm. Learners are matched by admission number (or by exact name if
 Blank cells are left alone, bad cells are reported, and teachers can only import subjects they are assigned to.
 The marklist then ranks everyone from first to last, and the class report cards are one click away.
 
+### Report cards and marklists
+
+Both print in a fixed paper layout (gold frame, crest, navy table headers). Report cards show the level and its full name,
+the total and mean, the position, the class teacher (taken from the staff member whose home class it is), signature and stamp
+boxes and the next-term date. Marklists print landscape with a **Subject mean** row and a **Class summary** row; learners
+with the same mean share a position.
+
+**Automatic comments.** Every subject without a teacher comment gets one that matches the learner's level, from excellent down
+to needs urgent improvement. The class teacher's and head teacher's remarks are written automatically from the overall mean.
+A comment a teacher types always wins. The wording follows whichever performance scale the school loaded.
+
+**Performance levels.** Academics > Performance levels offers the 8-level scale (BE1, BE2, AE1, AE2, ME1, ME2, EE1, EE2) and
+the 4-level scale. Both are only starting points: every level can be edited or removed.
+
+### Crest, signature and stamp
+
+Settings > Crest, signature and stamp. Upload an image from your phone or computer (PNG, JPG, WebP or GIF, up to 2 MB). Images are
+checked by their contents, stored in `backend/uploads/` (not in git, so include it in your backups) and are shown on report cards,
+including the parent links.
+
+### Several admins per school
+
+Super Admin > Schools > Manage > School admins. Add as many as a school needs. They all have identical access and see the same data.
+A school always keeps at least one active admin. The Overview page lists every school created with its number of admins.
+
+### Live updates
+
+Screens show what they already know instantly and refresh quietly: after every save, when you return to the tab, when a phone
+reconnects, and every 20 seconds. Pages are loaded on demand and fetched in the background after sign-in.
+
 ### Dark and light mode
 
 Use the sun/moon button in the top bar, or **Account and password > Appearance** (Light, Dark or System).
@@ -69,10 +99,10 @@ Printed report cards and marklists are always in light colours.
 ## Tests
 
 ```bash
-# backend: 17 tests (tenant isolation, roles, limits, suspension, view-as, marks import, time handling...)
+# backend: 22 tests (tenant isolation, roles, limits, suspension, view-as, marks import, time handling...)
 cd backend && source venv/bin/activate && python -m pytest -q
 
-# frontend: 42 full-stack tests that render every screen for every role against a live backend
+# frontend: 48 full-stack tests that render every screen for every role against a live backend
 cd backend
 export DATABASE_URL=sqlite:////tmp/e2e.db RATELIMIT_ENABLED=0 PORT=5055
 rm -f /tmp/e2e.db && flask db upgrade
@@ -120,3 +150,13 @@ publish `dist`, and the single-page redirect. Add the environment variable
 
 Crest/logo is a web address (no file upload yet), PDF comes from the browser's Print > Save as PDF, and there are no
 email or SMS notifications. Reminders appear inside the app (bell icon and dashboard).
+
+## Updating a deployed copy
+
+```bash
+cd ~/smartmark-solutions && git pull
+workon sms && pip install -r backend/requirements.txt
+cd backend && flask db upgrade
+```
+
+Then press **Reload** on the PythonAnywhere Web tab. Netlify redeploys the frontend by itself.

@@ -8,7 +8,7 @@ from app.models import (Mark, Exam, Subject, User, Grade, Stream, PerformanceBan
                         SCHOOL_ADMIN, TEACHER, EDUCATOR, STUDENT, STAFF_ROLES)
 from app.utils.audit import log_action
 from app.utils.auth import require, scoped
-from app.utils.helpers import body, band_for, avg, class_maps
+from app.utils.helpers import body, band_for, avg, class_maps, class_teacher_name
 
 bp = Blueprint("marks", __name__, url_prefix="/api")
 ADMIN = SCHOOL_ADMIN
@@ -167,7 +167,17 @@ def build_marklist(exam, grade, stream):
         if r["average"] != prev:
             pos, prev = i, r["average"]
         r["position"] = pos
-    return {"subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in subjects], "rows": rows}
+    stats = []
+    for s in subjects:
+        vals = [r["scores"][s.id] for r in rows if r["scores"].get(s.id) is not None]
+        tot = round(sum(vals), 1)
+        stats.append({"subject_id": s.id, "total": tot, "mean": round(tot / len(vals), 1) if vals else None, "count": len(vals)})
+    class_mean = avg([r["average"] for r in rows if r["average"] is not None])
+    class_band = band_for(bands, class_mean)
+    return {"subjects": [{"id": s.id, "name": s.name, "code": s.code} for s in subjects], "rows": rows,
+            "subject_stats": stats, "grand_total": round(sum(r["total"] for r in rows), 1), "class_mean": class_mean,
+            "class_band": class_band.code if class_band else None, "learners": len(rows),
+            "class_teacher": class_teacher_name(g.school_id, grade.id, stream.id if stream else None)}
 
 
 def _ml_context():
@@ -208,6 +218,9 @@ def marklist_export():
     for r in data["rows"]:
         ws.append([r["position"], r["admission_number"], r["student_name"], r["stream_name"]]
                   + [r["scores"].get(s["id"]) for s in data["subjects"]] + [r["total"], r["average"], r["band"]])
+    means = {x["subject_id"]: x for x in data["subject_stats"]}
+    ws.append(["", "", "Subject mean", ""] + [means[s["id"]]["mean"] for s in data["subjects"]]
+              + [data["grand_total"], data["class_mean"], data["class_band"]])
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)

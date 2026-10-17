@@ -2,15 +2,38 @@ const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 const KEY = "sms_token";
 const SUPER_KEY = "sms_super_token";
 
+// ---- live data -------------------------------------------------------------
+// Every screen that reads data re-fetches whenever this counter changes: after any save,
+// when you come back to the tab, when the phone reconnects, and every 20 seconds.
+export const queryCache = new Map();
+let epoch = 0;
+const listeners = new Set();
+export const getEpoch = () => epoch;
+export const subscribeEpoch = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
+export const bumpEpoch = () => { epoch += 1; listeners.forEach((fn) => fn()); };
+if (typeof window !== "undefined") {
+  const tick = () => { if (!document.hidden && localStorage.getItem(KEY)) bumpEpoch(); };
+  document.addEventListener("visibilitychange", tick);
+  window.addEventListener("focus", tick);
+  window.addEventListener("online", tick);
+  setInterval(tick, 20000);
+}
+
+const ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
+/** Uploaded images are stored as /api/files/...; when the API lives on another domain, point at it. */
+export const assetUrl = (u) => (u && u.startsWith("/api/") ? ORIGIN + u : u || "");
+
 export const tokens = {
   get: () => localStorage.getItem(KEY),
-  set: (t) => localStorage.setItem(KEY, t),
+  set: (t) => { localStorage.setItem(KEY, t); queryCache.clear(); bumpEpoch(); },
   getSuper: () => localStorage.getItem(SUPER_KEY),
   setSuper: (t) => localStorage.setItem(SUPER_KEY, t),
   clearSuper: () => localStorage.removeItem(SUPER_KEY),
   clear: () => {
     localStorage.removeItem(KEY);
     localStorage.removeItem(SUPER_KEY);
+    queryCache.clear();
+    bumpEpoch();
   },
 };
 
@@ -44,6 +67,7 @@ async function request(path, { method = "GET", body, form } = {}) {
     if (err.code === "PASSWORD_CHANGE_REQUIRED") emit("sms:pwchange");
     throw err;
   }
+  if (method !== "GET") bumpEpoch();
   return data;
 }
 

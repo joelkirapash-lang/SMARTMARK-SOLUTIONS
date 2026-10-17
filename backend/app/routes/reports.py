@@ -7,7 +7,8 @@ from app.models import (User, Exam, Mark, Subject, PerformanceBand, Grade, Strea
                         SCHOOL_ADMIN, TEACHER, EDUCATOR, STUDENT, utcnow, iso)
 from app.utils.audit import log_action
 from app.utils.auth import require, scoped
-from app.utils.helpers import body, band_for, avg
+from app.utils.helpers import body, band_for, avg, class_teacher_name
+from app.utils.remarks import tier_for, subject_remark, head_remark, class_remark
 from app.utils.security import generate_secure_token, hash_token
 
 bp = Blueprint("reports", __name__, url_prefix="/api")
@@ -23,18 +24,23 @@ def build_card(school, student, exam):
     stream_id = marks[0].stream_id if marks else student.stream_id
     stream = db.session.get(Stream, stream_id) if stream_id else None
 
-    rows, total, pcts = [], 0.0, []
+    rows, total, pcts, scored = [], 0.0, [], []
     for m in sorted(marks, key=lambda x: subjects.get(x.subject_id, "")):
         b = band_for(bands, m.pct)
-        rows.append({"subject": subjects.get(m.subject_id, "Subject"), "score": m.score, "max_score": m.max_score,
+        remark, auto = m.remark, False
+        if not remark and m.pct is not None:
+            remark, auto = subject_remark(tier_for(bands, m.pct)), True
+        name = subjects.get(m.subject_id, "Subject")
+        rows.append({"subject": name, "score": m.score, "max_score": m.max_score,
                      "pct": round(m.pct, 1) if m.pct is not None else None,
-                     "band": b.code if b else None, "band_label": b.label if b else None, "remark": m.remark})
+                     "band": b.code if b else None, "band_label": b.label if b else None,
+                     "remark": remark, "remark_auto": auto})
         if m.score is not None:
             total += m.score
             pcts.append(m.pct)
+            scored.append((m.pct, name))
     average = avg(pcts)
 
-    # class position among learners who sat the same exam in the same grade/stream
     position = size = None
     if marks:
         q = Mark.query.filter_by(school_id=sid, exam_id=exam.id, grade_id=marks[0].grade_id).filter(Mark.score.isnot(None))
@@ -48,16 +54,25 @@ def build_card(school, student, exam):
         if student.id in avgs:
             position = 1 + sum(1 for v in avgs.values() if v > avgs[student.id])
     overall = band_for(bands, average)
+    tier = tier_for(bands, average)
+    best = max(scored)[1] if len(scored) > 1 else None
+    weak = min(scored)[1] if len(scored) > 1 and min(scored)[0] != max(scored)[0] else None
     return {
         "school": {"name": school.name, "motto": school.motto, "crest_url": school.crest_url,
-                   "address": school.address, "footer": school.report_card_footer, "term": school.current_term},
+                   "address": school.address, "phone": school.contact_phone, "email": school.contact_email,
+                   "footer": school.report_card_footer, "term": school.current_term,
+                   "head_teacher_name": school.head_teacher_name, "head_signature_url": school.head_signature_url,
+                   "stamp_url": school.stamp_url, "next_term_begins": iso(school.next_term_begins)},
         "student": {"id": student.id, "name": student.full_name(), "admission_number": student.admission_number,
-                    "grade": grade.name if grade else None, "stream": stream.name if stream else None},
+                    "upi": student.upi_number, "assessment_number": student.assessment_number,
+                    "grade": grade.name if grade else None, "stream": stream.name if stream else None,
+                    "class_teacher": class_teacher_name(sid, grade.id if grade else None, stream_id)},
         "exam": {"id": exam.id, "name": exam.name, "term": exam.term, "date": iso(exam.exam_date)},
         "subjects": rows, "total": round(total, 1), "average": average,
-        "overall_band": overall.code if overall else None,
-        "overall_label": overall.label if overall else None,
+        "overall_band": overall.code if overall else None, "overall_label": overall.label if overall else None,
         "position": position, "class_size": size,
+        "class_teacher_remark": class_remark(student.first_name, tier, best, weak),
+        "head_teacher_remark": head_remark(student.first_name, average, tier),
     }
 
 

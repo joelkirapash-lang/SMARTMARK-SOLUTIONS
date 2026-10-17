@@ -16,8 +16,13 @@ CBC_SUBJECTS = [("Mathematics", "MATH"), ("English", "ENG"), ("Kiswahili", "KIS"
                 ("Science and Technology", "SCI"), ("Social Studies", "SST"), ("Religious Education", "RE"),
                 ("Creative Arts", "ART"), ("Agriculture and Nutrition", "AGR"),
                 ("Pre-Technical Studies", "PTS"), ("Physical and Health Education", "PHE")]
-CBC_BANDS = [("BE", "Below Expectation", 0, 39.99), ("AE", "Approaching Expectation", 40, 59.99),
-             ("ME", "Meeting Expectation", 60, 79.99), ("EE", "Exceeding Expectation", 80, 100)]
+# Levels are classified by their starting score, so fractional marks like 23.6 are never left unranked.
+CBC_BANDS_8 = [("BE1", "Below Expectation 1", 0, 10), ("BE2", "Below Expectation 2", 11, 23),
+               ("AE1", "Approaching Expectation 1", 24, 34), ("AE2", "Approaching Expectation 2", 35, 49),
+               ("ME1", "Meeting Expectation 1", 50, 59), ("ME2", "Meeting Expectation 2", 60, 69),
+               ("EE1", "Exceeding Expectation 1", 70, 79), ("EE2", "Exceeding Expectation 2", 80, 100)]
+CBC_BANDS_4 = [("BE", "Below Expectation", 0, 39), ("AE", "Approaching Expectation", 40, 59),
+               ("ME", "Meeting Expectation", 60, 79), ("EE", "Exceeding Expectation", 80, 100)]
 
 
 @bp.get("/grades")
@@ -233,13 +238,20 @@ def cbc_subjects():
 @bp.post("/academics/cbc-bands")
 @require(ADMIN)
 def cbc_bands():
+    d = body()
+    scale = str(d.get("scale", 8))
+    if scale not in ("4", "8"):
+        return jsonify(error="Choose the 8-level or the 4-level scale."), 400
     if scoped(PerformanceBand).first():
-        return jsonify(error="Bands already exist. Remove them first to load the starter set."), 400
-    for code, label, lo, hi in CBC_BANDS:
+        if not d.get("replace"):
+            return jsonify(error="Levels already exist. Choose replace to load a different set."), 400
+        scoped(PerformanceBand).delete()
+    bands = CBC_BANDS_8 if scale == "8" else CBC_BANDS_4
+    for code, label, lo, hi in bands:
         db.session.add(PerformanceBand(school_id=g.school_id, code=code, label=label, min_score=lo, max_score=hi))
-    log_action(g.school_id, g.current_user.id, "CBC_SETUP", "performance bands loaded")
+    log_action(g.school_id, g.current_user.id, "CBC_SETUP", f"{len(bands)} performance levels loaded")
     db.session.commit()
-    return jsonify(added=len(CBC_BANDS))
+    return jsonify(added=len(bands))
 
 
 # ---- class access for teachers / educators ----

@@ -90,13 +90,15 @@ def update_school():
     d = body()
     try:
         for f in ("name", "motto", "crest_url", "address", "contact_email", "contact_phone", "current_term",
-                  "report_card_footer"):
+                  "report_card_footer", "head_teacher_name", "head_signature_url", "stamp_url"):
             if f in d:
                 v = (d[f] or "").strip() if isinstance(d[f], str) else d[f]
                 if f == "name" and not v:
                     raise ValueError("The school name cannot be empty.")
+                if f.endswith("_url") and v and not v.startswith(("http://", "https://", "/api/files/")):
+                    raise ValueError("Use a web address that starts with https://, or upload an image.")
                 setattr(s, f, v or None) if f != "name" else setattr(s, f, v)
-        for f in ("term_start", "term_end"):
+        for f in ("term_start", "term_end", "next_term_begins"):
             if f in d:
                 setattr(s, f, parse_date(d[f]))
     except ValueError as e:

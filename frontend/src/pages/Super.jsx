@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2, CheckCircle2, PauseCircle, AlertTriangle, GraduationCap, Users, Plus, Eye, Pause, Play, Settings2, Search, KeyRound } from "lucide-react";
 import { api } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/Toast";
 import { cn, fmtDate, ROLE_LABEL } from "../lib/format";
@@ -13,9 +14,8 @@ import CredentialsModal from "../components/CredentialsModal";
 const PAY = { PAID: ["green", "Paid"], INSTALLMENTS: ["amber", "On installments"], OVERDUE: ["red", "Overdue"], TRIAL: ["blue", "Trial"] };
 
 export function SuperDashboard() {
-  const [s, setS] = useState(null);
+  const { data: s } = useQuery("/super/stats");
   const nav = useNavigate();
-  useEffect(() => { api.get("/super/stats").then(setS); }, []);
   if (!s) return <Spinner />;
   return (
     <Page title="Platform overview" subtitle="Every school on SMARTMARK SOLUTIONS at a glance."
@@ -27,6 +27,7 @@ export function SuperDashboard() {
         <Stat label="Overdue payments" value={s.overdue} icon={AlertTriangle} tone="rose" />
         <Stat label="Learners" value={s.students} icon={GraduationCap} tone="blue" />
         <Stat label="Teachers and educators" value={s.staff} icon={Users} tone="cyan" />
+        <Stat label="School admin accounts" value={s.admins} icon={KeyRound} tone="brand" />
       </div>
       <div className="grid xl:grid-cols-2 gap-6">
         <Card title="Largest schools by learners">
@@ -46,6 +47,15 @@ export function SuperDashboard() {
           )}
         </Card>
       </div>
+      <Card title={`Schools created (${s.schools})`} pad={false}>
+        {s.all_schools.length === 0 ? <Empty icon={Building2} title="No schools yet" hint="Schools you create appear here with how many admins each has." /> : (
+          <div className="overflow-x-auto sms-scroll"><table className="w-full text-sm min-w-[560px]">
+            <thead><tr className="text-left text-slate-600 bg-slate-50"><th className="px-5 py-2.5">School</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5 text-right">Admins</th><th className="px-3 py-2.5 text-right">Learners</th><th className="px-3 py-2.5 text-right">Staff</th><th className="px-5 py-2.5">Status</th></tr></thead>
+            <tbody>{s.all_schools.map((x) => (
+              <tr key={x.id} className="border-t border-slate-100"><td className="px-5 py-2.5 font-semibold">{x.name}</td><td className="px-3 py-2.5 text-slate-600">{fmtDate(x.created_at)}</td>
+                <td className="px-3 py-2.5 text-right"><Badge tone="brand">{x.admins}</Badge></td><td className="px-3 py-2.5 text-right">{x.students}</td><td className="px-3 py-2.5 text-right">{x.staff}</td>
+                <td className="px-5 py-2.5">{x.is_active ? <Badge tone="green">Active</Badge> : <Badge tone="amber">Paused</Badge>}</td></tr>))}</tbody></table></div>)}
+      </Card>
       <Card title="Latest activity across all schools"><ActivityFeed items={s.recent_activity} /></Card>
     </Page>
   );
@@ -73,11 +83,47 @@ function PlanFields({ f, set }) {
   );
 }
 
+function AdminsPanel({ school, onCreds }) {
+  const toast = useToast();
+  const { data: admins } = useQuery(`/super/schools/${school.id}/users?role=SCHOOL_ADMIN`);
+  const [f, setF] = useState({ first_name: "", second_name: "" });
+  const [busy, setBusy] = useState(false);
+  const add = async (e) => {
+    e.preventDefault(); setBusy(true);
+    try { const r = await api.post(`/super/schools/${school.id}/admins`, f); setF({ first_name: "", second_name: "" }); onCreds(r.credentials); toast.success("Admin added."); }
+    catch (x) { toast.error(x.message); } finally { setBusy(false); }
+  };
+  const reset = async (a) => {
+    if (!window.confirm(`Generate a new temporary password for ${a.full_name}?`)) return;
+    try { onCreds((await api.post(`/super/users/${a.id}/reset-password`)).credentials); } catch (x) { toast.error(x.message); }
+  };
+  const toggle = async (a) => { try { await api.post(`/super/users/${a.id}/status`, { active: a.status !== "ACTIVE" }); } catch (x) { toast.error(x.message); } };
+  return (
+    <div className="rounded-xl ring-1 ring-slate-200 p-4 space-y-3">
+      <p className="font-display font-semibold">School admins <Badge tone="brand">{admins ? admins.length : "…"}</Badge></p>
+      <p className="text-xs text-slate-500">Every admin sees and can do exactly the same things. Add as many as the school needs.</p>
+      <ul className="divide-y divide-slate-100">
+        {(admins || []).map((a) => (
+          <li key={a.id} className="py-2 flex items-center gap-3"><Avatar name={a.full_name} size={32} />
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{a.full_name} {a.status !== "ACTIVE" && <Badge tone="red">Disabled</Badge>}</p><p className="text-xs text-slate-500 truncate">{a.smartmark_email}</p></div>
+            <Btn size="sm" variant="ghost" icon={KeyRound} onClick={() => reset(a)} aria-label={`Reset password for ${a.full_name}`}><span className="sr-only">Reset</span></Btn>
+            <Btn size="sm" variant="ghost" onClick={() => toggle(a)}>{a.status === "ACTIVE" ? "Disable" : "Enable"}</Btn></li>
+        ))}
+      </ul>
+      <form onSubmit={add} className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+        <Input label="First name" required value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} />
+        <Input label="Second name" value={f.second_name} onChange={(e) => setF({ ...f, second_name: e.target.value })} />
+        <Btn type="submit" loading={busy} icon={Plus}>Add admin</Btn>
+      </form>
+    </div>
+  );
+}
+
 export function Schools() {
   const { viewAs } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
-  const [rows, setRows] = useState(null);
+  const { data: rows } = useQuery("/super/schools");
   const [create, setCreate] = useState(null);
   const [manage, setManage] = useState(null);
   const [creds, setCreds] = useState(null);
@@ -85,8 +131,7 @@ export function Schools() {
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
 
-  const load = useCallback(() => api.get("/super/schools").then(setRows), []);
-  useEffect(() => { load(); }, [load]);
+  const load = () => {};
   const set = (state, setter) => (k) => (e) => setter({ ...state, [k]: e.target.value });
 
   const submitCreate = async (e) => {
@@ -139,6 +184,7 @@ export function Schools() {
                       <p className="text-xs text-slate-500">{s.plan_name || "No plan name"} · since {fmtDate(s.created_at)}</p></div>
                     <div className="flex flex-col items-end gap-1">{!s.is_active && <Badge tone="amber">Paused</Badge>}<Badge tone={tone}>{label}</Badge></div>
                   </div>
+                  <p className="text-sm text-slate-600">School admins: <b>{s.usage.admins}</b></p>
                   {[["Learners", s.usage.students, s.max_students], ["Staff", s.usage.staff, s.max_staff]].map(([k, used, max]) => (
                     <div key={k}><div className="flex justify-between text-sm mb-1"><span className="text-slate-600">{k}</span><span className="font-semibold">{used}{max !== null ? ` / ${max}` : " · no limit"}</span></div>
                       <Progress value={used} max={max || used || 1} tone={max !== null && used >= max ? "red" : "brand"} /></div>
@@ -184,10 +230,7 @@ export function Schools() {
             <ErrorNote error={err} />
             <Input label="School name" value={manage.name} onChange={set(manage, setManage)("name")} />
             <PlanFields f={manage} set={set(manage, setManage)} />
-            <div className="rounded-xl ring-1 ring-slate-200 p-4 space-y-3">
-              <p className="font-display font-semibold">Admin access</p>
-              <Btn size="sm" variant="outline" icon={KeyRound} onClick={() => resetAdmin(manage)}>Reset admin password</Btn>
-            </div>
+            <AdminsPanel school={manage} onCreds={setCreds} />
             <div className={cn("rounded-xl p-4 space-y-3 ring-1", manage.is_active ? "ring-rose-200 bg-rose-50/50" : "ring-amber-300 bg-amber-50")}>
               <p className="font-display font-semibold">{manage.is_active ? "Pause this school" : "This school is paused"}</p>
               {manage.is_active ? (
@@ -212,20 +255,15 @@ export function ViewAs() {
   const { viewAs } = useAuth();
   const nav = useNavigate();
   const toast = useToast();
-  const [schools, setSchools] = useState(null);
-  const [sid, setSid] = useState("");
+  const { data: schools } = useQuery("/super/schools");
+  const [sid0, setSid] = useState("");
   const [role, setRole] = useState("SCHOOL_ADMIN");
   const [q, setQ] = useState("");
-  const [users, setUsers] = useState(null);
+  const [dq, setDq] = useState("");
   const [creds, setCreds] = useState(null);
-
-  useEffect(() => { api.get("/super/schools").then((r) => { setSchools(r); if (r[0]) setSid(r[0].id); }); }, []);
-  useEffect(() => {
-    if (!sid) return;
-    setUsers(null);
-    const t = setTimeout(() => api.get(`/super/schools/${sid}/users?role=${role}&q=${encodeURIComponent(q)}`).then(setUsers), q ? 250 : 0);
-    return () => clearTimeout(t);
-  }, [sid, role, q]);
+  useEffect(() => { const t = setTimeout(() => setDq(q), 250); return () => clearTimeout(t); }, [q]);
+  const sid = sid0 || schools?.[0]?.id || "";
+  const { data: users } = useQuery(sid ? `/super/schools/${sid}/users?role=${role}&q=${encodeURIComponent(dq)}` : null);
 
   const enter = async (u) => { try { await viewAs(u.id); nav("/app"); } catch (e) { toast.error(e.message); } };
   const reset = async (u) => {

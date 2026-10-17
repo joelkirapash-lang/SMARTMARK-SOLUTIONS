@@ -21,6 +21,7 @@ export default function Academics() {
   useEffect(() => { load(); }, [load]);
 
   const run = async (fn, ok) => { setError(""); try { await fn(); ok && toast.success(ok); load(); } catch (e) { setError(e.message); } };
+  const loadBands = (scale) => { if (bands.length && !window.confirm("Replace your current performance levels?")) return; run(() => api.post("/academics/cbc-bands", { scale, replace: bands.length > 0 }), "Performance levels loaded."); };
   const [gName, setGName] = useState(""); const [gOrder, setGOrder] = useState("");
   const [stName, setStName] = useState({});
   const [sName, setSName] = useState(""); const [sCode, setSCode] = useState("");
@@ -115,7 +116,11 @@ export default function Academics() {
                 <Input label="To %" type="number" step="0.01" required value={band.max_score} onChange={(e) => setBand({ ...band, max_score: e.target.value })} /></div>
               <Btn type="submit" icon={Plus} className="w-full">Add level</Btn>
             </form>
-            {bands.length === 0 && <Btn variant="soft" icon={Sparkles} className="w-full mt-4" onClick={() => run(() => api.post("/academics/cbc-bands"), "Starter levels loaded. Edit them to match your school policy.")}>Load starter levels (BE, AE, ME, EE)</Btn>}
+            <div className="mt-4 space-y-2">
+              <Btn variant="soft" icon={Sparkles} className="w-full" onClick={() => loadBands(8)}>Load the 8-level scale (BE1 to EE2)</Btn>
+              <Btn variant="outline" icon={Sparkles} className="w-full" onClick={() => loadBands(4)}>Load the 4-level scale (BE, AE, ME, EE)</Btn>
+              <p className="text-xs text-slate-500">Loading a scale replaces the current levels, and you can still edit any of them. Automatic comments on report cards follow the scale you choose.</p>
+            </div>
           </Card>
           <Card title="Performance levels" className="xl:col-span-2" pad={false}>
             {bands.length === 0 ? <Empty title="No levels yet" hint="Report cards show a level beside each score once you add them." /> : (

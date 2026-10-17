@@ -83,7 +83,7 @@ def setup_school(api, super_token, name="Anestar Secondary", **extra):
     st = api.post("/api/streams", admin_tok, json={"name": "A", "grade_id": g["id"]}).get_json()
     sub = api.post("/api/subjects", admin_tok, json={"name": "Mathematics", "code": "MATH"}).get_json()
     sub2 = api.post("/api/subjects", admin_tok, json={"name": "English", "code": "ENG"}).get_json()
-    api.post("/api/academics/cbc-bands", admin_tok)
+    api.post("/api/academics/cbc-bands", admin_tok, json={"scale": 4})
     return {"admin": admin_tok, "grade": g, "stream": st, "math": sub, "eng": sub2, "cred": cred}
 
 

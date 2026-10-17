@@ -1,84 +1,60 @@
-import { Award } from "lucide-react";
-import { cn, bandStyle, fmtDate } from "../lib/format";
+import { assetUrl } from "../lib/api";
+import { cn, fmtDate } from "../lib/format";
 
+/** The printed report card. Fixed light colours so it always looks like paper. */
 export default function ReportCardView({ data, className = "" }) {
   if (!data) return null;
-  const { school, student, exam, subjects, total, average, position, class_size, overall_band, overall_label } = data;
+  const { school, student, exam, subjects, total, average, position, class_size, overall_band,
+    class_teacher_remark, head_teacher_remark } = data;
+  const line = [school.motto, school.address, school.phone, school.email].filter(Boolean).join("  ·  ");
+  const term = exam.term || school.term;
   return (
-    <article className={cn("print-area bg-surface rounded-2xl shadow-soft ring-1 ring-slate-900/5 max-w-3xl mx-auto overflow-hidden", className)}>
-      <div className="h-2 bg-gradient-to-r from-brand-500 via-accent-500 to-brand-700" />
-      <div className="p-6 sm:p-10">
-        <header className="flex items-start justify-between gap-4 pb-6 border-b-2 border-slate-900">
-          <div>
-            <h2 className="font-display text-2xl sm:text-3xl font-semibold text-slate-900">{school.name}</h2>
-            {school.motto && <p className="italic text-slate-600">{school.motto}</p>}
-            {school.address && <p className="text-sm text-slate-500 mt-1">{school.address}</p>}
-          </div>
-          {school.crest_url && <img src={school.crest_url} alt="" className="size-16 sm:size-20 object-contain" />}
-        </header>
-        <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-slate-500">Learner progress report</p>
-            <p className="font-display text-xl font-semibold">{student.name}</p>
-            <p className="text-sm text-slate-600">
-              {student.admission_number && <>Adm. {student.admission_number}</>}
-              {student.grade && <> · {student.grade}{student.stream ? ` ${student.stream}` : ""}</>}
-            </p>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-semibold text-slate-900">{exam.name}</p>
-            <p className="text-slate-600">{[exam.term, exam.date && fmtDate(exam.date)].filter(Boolean).join(" · ")}</p>
-          </div>
+    <article className={cn("paper rc print-area max-w-[860px] mx-auto shadow-soft", className)}>
+      <header className="rc-head">
+        {school.crest_url ? <img className="rc-crest" src={assetUrl(school.crest_url)} alt="School crest" /> : <div className="rc-crest-gap" />}
+        <div className="rc-headtext">
+          <div className="rc-school">{school.name}</div>
+          {line && <div className="rc-sub">{line}</div>}
+          <div className="rc-title">Learner report card — {[term, exam.name].filter(Boolean).join(" · ")}</div>
         </div>
-
-        <div className="mt-6 overflow-x-auto sms-scroll">
-          <table className="w-full text-sm min-w-[420px]">
-            <thead>
-              <tr className="text-left text-slate-600 border-b border-slate-300">
-                <th className="py-2 pr-3 font-semibold">Learning area</th>
-                <th className="py-2 px-3 font-semibold text-right">Score</th>
-                <th className="py-2 px-3 font-semibold">Level</th>
-                <th className="py-2 pl-3 font-semibold">Remark</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map((s, i) => (
-                <tr key={i} className="border-b border-slate-100 align-top">
-                  <td className="py-2.5 pr-3 font-medium">{s.subject}</td>
-                  <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                    {s.score ?? "—"}<span className="text-slate-400"> / {s.max_score}</span>
-                    {s.pct !== null && (
-                      <div className="h-1.5 w-20 ml-auto mt-1 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-brand-500" style={{ width: `${s.pct}%` }} /></div>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-3">{s.band ? <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold ring-1", bandStyle(s.band))} title={s.band_label}>{s.band}</span> : "—"}</td>
-                  <td className="py-2.5 pl-3 text-slate-600">{s.remark}</td>
-                </tr>
-              ))}
-              {!subjects.length && <tr><td colSpan={4} className="py-8 text-center text-slate-500">No marks have been recorded for this exam yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[["Total", total], ["Average", average === null ? "—" : `${average}%`], ["Position", position ? `${position} of ${class_size}` : "—"],
-            ["Overall level", overall_band ? `${overall_band}` : "—"]].map(([k, v]) => (
-            <div key={k} className="rounded-xl bg-brand-50 px-4 py-3">
-              <p className="text-xs text-brandtext">{k}</p>
-              <p className="font-display text-lg font-semibold text-slate-900 flex items-center gap-1.5">
-                {k === "Position" && position === 1 && <Award size={18} className="text-accent-500" />}{v}
-              </p>
-              {k === "Overall level" && overall_label && <p className="text-xs text-slate-600">{overall_label}</p>}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-14 grid grid-cols-2 gap-10 text-xs text-slate-600">
-          <div className="border-t border-slate-400 pt-2">Class teacher's signature</div>
-          <div className="border-t border-slate-400 pt-2">Principal's signature and stamp</div>
-        </div>
-        {school.footer && <p className="mt-8 text-center text-xs text-slate-500">{school.footer}</p>}
+        <div className="rc-crest-gap" />
+      </header>
+      <div className="rc-rule" />
+      <div className="rc-info">
+        <div>Name: <b>{student.name.toUpperCase()}</b></div>
+        <div>Adm No: <b>{student.admission_number || ""}</b></div>
+        <div>Grade: <b>{[student.grade, student.stream].filter(Boolean).join(" ")}</b></div>
+        <div>UPI: <b>{student.upi || "–"}</b> &nbsp; Assess. No: <b>{student.assessment_number || "–"}</b></div>
+        <div>Position: <b>{position ? `${position} out of ${class_size}` : "–"}</b></div>
+        <div>Class teacher: <b>{(student.class_teacher || "–").toUpperCase()}</b></div>
       </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table className="rc-table" style={{ minWidth: 520 }}>
+          <thead><tr><th>Learning area</th><th>Score</th><th>Out of</th><th>Level</th><th>Remarks</th></tr></thead>
+          <tbody>
+            {subjects.map((s, i) => (
+              <tr key={i}>
+                <td>{s.subject}</td><td>{s.score ?? "–"}</td><td>{s.max_score}</td>
+                <td>{s.band ? `${s.band} ${s.band_label || ""}` : "–"}</td><td>{s.remark}</td>
+              </tr>
+            ))}
+            {!subjects.length && <tr><td colSpan={5} style={{ textAlign: "center", padding: 18 }}>No marks have been recorded for this exam yet.</td></tr>}
+            <tr className="total"><td>Total / Mean</td><td>{total}</td><td /><td>{overall_band || ""}</td><td>Mean: {average ?? "–"}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="rc-box"><b>Class teacher's remarks</b>{class_teacher_remark}</div>
+      <div className="rc-box"><b>Head teacher's remarks</b>{head_teacher_remark}</div>
+      <div className="rc-sign">
+        <div>Class teacher signature</div>
+        <div>{school.head_signature_url && <img src={assetUrl(school.head_signature_url)} alt="Head teacher signature" />}
+          Head teacher signature{school.head_teacher_name ? ` — ${school.head_teacher_name.toUpperCase()}` : ""}</div>
+        <div>{school.stamp_url && <img src={assetUrl(school.stamp_url)} alt="School stamp" />}School stamp</div>
+      </div>
+      {school.next_term_begins && <div className="rc-next">Next term begins: {fmtDate(school.next_term_begins, { day: "numeric", month: "long", year: "numeric" })}</div>}
+      <footer className="rc-foot">{school.footer && <div style={{ textTransform: "uppercase" }}>{school.footer}</div>}<div>Powered by SMARTMARK SOLUTIONS</div></footer>
     </article>
   );
 }

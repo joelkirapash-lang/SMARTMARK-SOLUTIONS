@@ -1,4 +1,5 @@
 import os
+import tempfile
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -22,10 +23,13 @@ class Config:
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
     FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://localhost:5173")
     RATELIMIT_STORAGE_URI = "memory://"
+    UPLOAD_DIR = os.environ.get("UPLOAD_DIR") or os.path.join(BASE_DIR, "uploads")
+    MAX_CONTENT_LENGTH = 6 * 1024 * 1024
     RATELIMIT_ENABLED = os.environ.get("RATELIMIT_ENABLED", "1") != "0"
 
 
 class TestConfig(Config):
     TESTING = True
+    UPLOAD_DIR = tempfile.mkdtemp()
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     RATELIMIT_ENABLED = False

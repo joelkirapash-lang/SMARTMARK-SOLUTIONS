@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from app.extensions import db
 from app.models import (School, User, AuditLog, SCHOOL_ADMIN, TEACHER, EDUCATOR, STUDENT, STAFF_ROLES,
-                        SUPER_ADMIN, utcnow)
+                        SUPER_ADMIN, utcnow, iso)
 from app.routes.auth import make_token
 from app.utils.audit import log_action, serialize_logs
 from app.utils.auth import require
@@ -57,6 +57,11 @@ def stats():
         "suspended": sum(1 for s in schools if not s.is_active),
         "overdue": sum(1 for s in schools if s.payment_status == "OVERDUE"),
         "students": total["students"], "staff": total["staff"],
+        "admins": sum(c["admins"] for c in counts.values()),
+        "all_schools": [{"id": s.id, "name": s.name, "created_at": iso(s.created_at), "is_active": s.is_active,
+                         "payment_status": s.payment_status, "admins": counts[s.id]["admins"],
+                         "students": counts[s.id]["students"], "staff": counts[s.id]["teachers"] + counts[s.id]["educators"]}
+                        for s in sorted(schools, key=lambda x: x.created_at, reverse=True)],
         "attention": [_school_row(s, counts) for s in attention],
         "top_schools": [{"name": s.name, "students": counts[s.id]["students"],
                          "staff": counts[s.id]["teachers"] + counts[s.id]["educators"]} for s in top],
@@ -222,3 +227,44 @@ def platform_activity():
         q = q.filter_by(school_id=request.args["school_id"])
     logs = q.order_by(AuditLog.created_at.desc()).limit(300).all()
     return jsonify(serialize_logs(logs, include_school=True))
+
+
+@bp.post("/schools/<sid>/admins")
+@require(SA)
+def add_admin(sid):
+    """A school may have any number of admins. They all have identical access."""
+    s = db.session.get(School, sid)
+    if s is None:
+        return jsonify(error="School not found."), 404
+    d = body()
+    first, second = (d.get("first_name") or "").strip(), (d.get("second_name") or "").strip()
+    if not first:
+        return jsonify(error="Enter the admin's first name."), 400
+    email = generate_login_email(s.slug, first, second, SCHOOL_ADMIN)
+    pw = generate_temp_password()
+    admin = User(school_id=s.id, role=SCHOOL_ADMIN, first_name=first, second_name=second or None,
+                 phone_number=(d.get("phone") or None), smartmark_email=email, password_hash=hash_password(pw),
+                 must_change_password=True, created_by_id=g.current_user.id)
+    db.session.add(admin)
+    log_action(s.id, g.current_user.id, "ACCOUNT_CREATED", f"School admin account for {admin.full_name()}")
+    db.session.commit()
+    n = User.query.filter_by(school_id=s.id, role=SCHOOL_ADMIN).count()
+    return jsonify(credentials={"name": admin.full_name(), "email": email, "password": pw, "role": SCHOOL_ADMIN}, admins=n), 201
+
+
+@bp.post("/users/<uid>/status")
+@require(SA)
+def set_admin_status(uid):
+    u = db.session.get(User, uid)
+    if u is None or u.role != SCHOOL_ADMIN:
+        return jsonify(error="Admin not found."), 404
+    active = bool(body().get("active"))
+    if not active:
+        others = User.query.filter(User.school_id == u.school_id, User.role == SCHOOL_ADMIN,
+                                   User.status == "ACTIVE", User.id != u.id).count()
+        if others == 0:
+            return jsonify(error="A school must keep at least one active admin."), 400
+    u.status = "ACTIVE" if active else "DISABLED"
+    log_action(u.school_id, g.current_user.id, "ACCOUNT_ENABLED" if active else "ACCOUNT_DISABLED", u.full_name())
+    db.session.commit()
+    return jsonify(u.to_dict(full=False))

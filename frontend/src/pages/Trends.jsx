@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { TrendingUp, TrendingDown, Minus, Sparkles } from "lucide-react";
-import { api, qs } from "../lib/api";
+import { qs } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { cn, pct } from "../lib/format";
 import { Page, Card, Select, Empty, Spinner, Tabs, Badge } from "../components/ui";
@@ -23,17 +24,13 @@ export default function Trends() {
   const { user } = useAuth();
   const isAdmin = user.role === "SCHOOL_ADMIN";
   const [sp] = useSearchParams();
-  const [grades, setGrades] = useState([]); const [streams, setStreams] = useState([]); const [subjects, setSubjects] = useState([]);
   const [g, setG] = useState(""); const [s, setS] = useState(""); const [sub, setSub] = useState("");
   const [scope, setScope] = useState(isAdmin ? "all" : sp.get("mine") === "0" ? "all" : "mine");
-  const [tr, setTr] = useState(null); const [ov, setOv] = useState(null); const [filter, setFilter] = useState("all");
-  useEffect(() => { api.get("/grades").then(setGrades); api.get("/subjects").then(setSubjects); }, []);
-  useEffect(() => { g ? api.get(`/streams${qs({ grade_id: g })}`).then(setStreams) : setStreams([]); }, [g]);
-  useEffect(() => {
-    setTr(null); setOv(null);
-    const q = qs({ grade_id: g, stream_id: s, subject_id: sub, mine: !isAdmin && scope === "mine" ? 1 : "" });
-    api.get(`/analytics/trends${q}`).then(setTr); api.get(`/analytics/overview${q}`).then(setOv);
-  }, [g, s, sub, scope, isAdmin]);
+  const [filter, setFilter] = useState("all");
+  const grades = useQuery("/grades").data || []; const subjects = useQuery("/subjects").data || [];
+  const streams = useQuery(g ? `/streams${qs({ grade_id: g })}` : null).data || [];
+  const q = qs({ grade_id: g, stream_id: s, subject_id: sub, mine: !isAdmin && scope === "mine" ? 1 : "" });
+  const tr = useQuery(`/analytics/trends${q}`).data; const ov = useQuery(`/analytics/overview${q}`).data;
   const rows = useMemo(() => (ov || []).filter((r) => filter === "all" || r.status === filter), [ov, filter]);
   const counts = useMemo(() => (ov || []).reduce((a, r) => ({ ...a, [r.status]: (a[r.status] || 0) + 1 }), {}), [ov]);
   const empty = tr && tr.exams.length === 0;

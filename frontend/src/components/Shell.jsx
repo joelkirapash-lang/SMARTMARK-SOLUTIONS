@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import {
   LayoutDashboard, Users, Layers, KeyRound, FileText, PenLine, ListOrdered, ScrollText, TrendingUp, ArrowRightLeft,
@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { cn, ROLE_LABEL, fmtDate, tzName, daysLeftLabel } from "../lib/format";
 import { Avatar, Badge } from "./ui";
 import { ModeToggle } from "../context/Mode";
@@ -98,15 +99,10 @@ function SearchBox() {
 }
 
 function Bell_() {
-  const [data, setData] = useState({ items: [], overdue: 0, total: 0 });
+  const { data: nd } = useQuery("/notifications");
+  const data = nd || { items: [], overdue: 0, total: 0 };
   const [open, setOpen] = useState(false);
   const ref = useRef();
-  useEffect(() => {
-    const load = () => api.get("/notifications").then(setData).catch(() => {});
-    load();
-    const t = setInterval(load, 300000);
-    return () => clearInterval(t);
-  }, []);
   useEffect(() => {
     const off = (e) => !ref.current?.contains(e.target) && setOpen(false);
     document.addEventListener("mousedown", off);
@@ -221,7 +217,7 @@ export default function Shell() {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
-        <Outlet />
+        <Suspense fallback={<div className="h-1 w-full overflow-hidden rounded bg-brand-100"><div className="h-full w-1/3 rounded bg-brand-500 sms-pulse" /></div>}><Outlet /></Suspense>
       </main>
     </div>
   );

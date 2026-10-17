@@ -85,7 +85,7 @@ def _apply_fields(u, school, d):
             raise ValueError("Grade is required.")
         if "date_of_birth" in d:
             u.date_of_birth = parse_date(d["date_of_birth"])
-        for f in ("guardian_name", "guardian_phone", "guardian_email"):
+        for f in ("guardian_name", "guardian_phone", "guardian_email", "upi_number", "assessment_number"):
             if f in d:
                 setattr(u, f, (d[f] or "").strip() or None)
     else:

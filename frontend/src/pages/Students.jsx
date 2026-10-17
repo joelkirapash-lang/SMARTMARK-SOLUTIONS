@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, GraduationCap } from "lucide-react";
-import { api, qs } from "../lib/api";
+import { qs } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { Page, Card, Select, Empty, Spinner, Avatar } from "../components/ui";
 
 export default function Students() {
   const [sp] = useSearchParams();
-  const [grades, setGrades] = useState([]); const [streams, setStreams] = useState([]);
   const [g, setG] = useState(""); const [s, setS] = useState(""); const [q, setQ] = useState(sp.get("q") || "");
-  const [rows, setRows] = useState(null);
-  useEffect(() => { api.get("/grades").then(setGrades); }, []);
-  useEffect(() => { g ? api.get(`/streams${qs({ grade_id: g })}`).then(setStreams) : setStreams([]); }, [g]);
-  useEffect(() => { setRows(null); const t = setTimeout(() => api.get(`/students${qs({ grade_id: g, stream_id: s, q })}`).then(setRows), q ? 250 : 0); return () => clearTimeout(t); }, [g, s, q]);
+  const [dq, setDq] = useState(q);
+  useEffect(() => { const t = setTimeout(() => setDq(q), 250); return () => clearTimeout(t); }, [q]);
+  const grades = useQuery("/grades").data || [];
+  const streams = useQuery(g ? `/streams${qs({ grade_id: g })}` : null).data || [];
+  const rows = useQuery(`/students${qs({ grade_id: g, stream_id: s, q: dq })}`).data;
   return (
     <Page title="Learners" subtitle="Everyone in your school. You can look at class lists here; only the administrator can change them.">
       <div className="flex flex-col sm:flex-row gap-3">

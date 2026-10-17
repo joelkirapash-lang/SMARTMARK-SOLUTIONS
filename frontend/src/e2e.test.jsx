@@ -109,6 +109,8 @@ describe("school admin", () => {
     await screen.findByText("Amina Hassan", {}, { timeout: 15000 });
     fireEvent.click(screen.getByRole("button", { name: /Add learner/ }));
     const dlg = await screen.findByRole("dialog");
+    expect(within(dlg).getByLabelText(/UPI number/)).toBeTruthy();
+    expect(within(dlg).getByLabelText(/Assessment number/)).toBeTruthy();
     fireEvent.change(within(dlg).getByLabelText(/First name/), { target: { value: "Zawadi" } });
     fireEvent.change(within(dlg).getByLabelText(/Second name/), { target: { value: "Njeri" } });
     fireEvent.change(within(dlg).getByLabelText(/Admission number/), { target: { value: "2001" } });
@@ -139,8 +141,8 @@ describe("school admin", () => {
     await within(sel[2]).findByText("Midterm");
     fireEvent.change(sel[0], { target: { value: W.g4.id } });
     fireEvent.change(sel[2], { target: { value: W.e2.id } });
-    expect(await screen.findByText("Amina Hassan", {}, { timeout: 15000 })).toBeTruthy();
-    expect(screen.getAllByText("EE").length).toBeGreaterThan(0);
+    expect(await screen.findByText("AMINA HASSAN", {}, { timeout: 15000 })).toBeTruthy();
+    expect(screen.getAllByText("EE2").length).toBeGreaterThan(0);
     mount("/app/trends", W.admin);
     expect(await screen.findByText(/Class by subject/, {}, { timeout: 15000 })).toBeTruthy();
     expect(await screen.findAllByText(/Mathematics/)).toBeTruthy();
@@ -148,9 +150,9 @@ describe("school admin", () => {
 
   it("report card shows learner, position and level", async () => {
     mount(`/app/report-cards?student=${W.stuA.user.id}&exam=${W.e2.id}`, W.admin);
-    expect(await screen.findByText(/Learner progress report/, {}, { timeout: 15000 })).toBeTruthy();
-    expect(await screen.findByText("Amina Hassan")).toBeTruthy();
-    expect(await screen.findByText(/1 of 2/)).toBeTruthy();
+    expect(await screen.findByText(/Learner report card/i, {}, { timeout: 15000 })).toBeTruthy();
+    expect(await screen.findByText("AMINA HASSAN")).toBeTruthy();
+    expect(await screen.findByText(/1 out of 2/)).toBeTruthy();
   });
 });
 
@@ -199,6 +201,52 @@ describe("student", () => {
   });
 });
 
+describe("layout, uploads, admins and live updates", () => {
+  it("report card has the school layout and automatic teacher comments", async () => {
+    mount(`/app/report-cards?student=${W.stuA.user.id}&exam=${W.e2.id}`, W.admin);
+    expect(await screen.findByText(/Learner report card/i, {}, { timeout: 15000 })).toBeTruthy();
+    for (const t of [/Class teacher's remarks/, /Head teacher's remarks/, /Total \/ Mean/, /School stamp/, /Powered by SMARTMARK SOLUTIONS/]) expect(await screen.findByText(t)).toBeTruthy();
+    expect(await screen.findByText(/An outstanding result by AMINA at 81%/)).toBeTruthy();
+    expect(await screen.findByText(/Very good work\. Aim even higher\./)).toBeTruthy();
+    expect(await screen.findByText("Good")).toBeTruthy();
+  });
+  it("marklist shows subject means and the class summary", async () => {
+    mount(`/app/marklist?exam=${W.e2.id}&grade=${W.g4.id}&stream=${W.stream.id}`, W.admin);
+    expect(await screen.findByText("Subject mean", {}, { timeout: 15000 })).toBeTruthy();
+    expect(await screen.findByText("Class summary")).toBeTruthy();
+    expect(await screen.findByText(/Powered by SMARTMARK SOLUTIONS/)).toBeTruthy();
+  });
+  it("settings offers uploads for crest, signature and stamp", async () => {
+    mount("/app/settings", W.admin); await heading(/School settings/);
+    for (const l of ["School crest or logo file", "Head teacher's signature file", "School stamp file"]) expect(await screen.findByLabelText(l, {}, { timeout: 15000 })).toBeTruthy();
+    expect(await screen.findByLabelText(/Head teacher's name/)).toBeTruthy();
+  });
+  it("super dashboard lists the schools created with their admin counts", async () => {
+    mount("/app", W.super);
+    expect(await screen.findByText(/Schools created \(/, {}, { timeout: 15000 })).toBeTruthy();
+    expect(await screen.findByText("School admin accounts")).toBeTruthy();
+  });
+  it("super admin can add another admin to a school", async () => {
+    mount("/app/schools", W.super);
+    fireEvent.click(await screen.findByRole("button", { name: /Manage/ }, { timeout: 15000 }));
+    expect(await screen.findByText(/exactly the same things/)).toBeTruthy();
+    const dlg = await screen.findByRole("dialog");
+    fireEvent.change(within(dlg).getByLabelText(/^First name/), { target: { value: "Peter" } });
+    fireEvent.change(within(dlg).getByLabelText(/^Second name/), { target: { value: "Kiprop" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: /Add admin/ }));
+    expect((await screen.findAllByText("peter.kiprop@admin.anestar-secondary.com", {}, { timeout: 15000 })).length).toBeGreaterThan(0);
+    const admins = await call("GET", `/super/schools/${W.school.id}/users?role=SCHOOL_ADMIN`, null, W.super);
+    expect(admins.length).toBe(2);
+  });
+  it("screens update by themselves when something changes elsewhere", async () => {
+    mount("/app/exams", W.admin);
+    expect(await screen.findByText("Opener", {}, { timeout: 15000 })).toBeTruthy();
+    await call("POST", "/exams", { name: "Added Elsewhere" }, W.admin);
+    window.dispatchEvent(new Event("focus"));
+    expect(await screen.findByText("Added Elsewhere", {}, { timeout: 15000 })).toBeTruthy();
+  });
+});
+
 describe("import and appearance", () => {
   it("import marks page opens for admin and for a teacher with only their own grades", async () => {
     mount("/app/import", W.admin); await heading(/Import marks/);
@@ -210,7 +258,7 @@ describe("import and appearance", () => {
   });
   it("marklist and report-card links pre-fill the class", async () => {
     mount(`/app/marklist?exam=${W.e2.id}&grade=${W.g4.id}&stream=${W.stream.id}`, W.admin);
-    expect(await screen.findByText("Amina Hassan", {}, { timeout: 15000 })).toBeTruthy();
+    expect(await screen.findByText("AMINA HASSAN", {}, { timeout: 15000 })).toBeTruthy();
     mount(`/app/report-cards?exam=${W.e2.id}&grade=${W.g4.id}&stream=${W.stream.id}`, W.admin);
     expect(await screen.findByRole("button", { name: /Print the whole class/ }, { timeout: 15000 })).toBeTruthy();
   });

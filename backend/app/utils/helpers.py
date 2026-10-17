@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import request
 
-from app.models import Grade, Stream, Subject
+from app.models import Grade, Stream, Subject, User, STAFF_ROLES
 
 
 def body():
@@ -54,3 +54,17 @@ def band_for(bands, pct):
 def avg(values):
     values = [v for v in values if v is not None]
     return round(sum(values) / len(values), 1) if values else None
+
+
+def class_teacher_name(school_id, grade_id, stream_id=None):
+    """The staff member whose home class this is. With no stream chosen, only
+    answers when exactly one teacher owns the grade."""
+    if not grade_id:
+        return None
+    rows = User.query.filter(User.school_id == school_id, User.role.in_(STAFF_ROLES),
+                             User.home_grade_id == grade_id, User.status == "ACTIVE").all()
+    if stream_id:
+        pick = [u for u in rows if u.home_stream_id == stream_id] or [u for u in rows if not u.home_stream_id]
+    else:
+        pick = rows if len(rows) == 1 else []
+    return pick[0].full_name() if pick else None

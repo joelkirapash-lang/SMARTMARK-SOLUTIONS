@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Users, UserCheck, Layers, CheckCircle2, Circle, AlertTriangle, TrendingUp, TrendingDown, PenLine, ClipboardList, Trophy, BookOpen, FileText, Award } from "lucide-react";
-import { api } from "../lib/api";
+import { useQuery } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { cn, fmtDate, daysLeftLabel, pct, ROLE_LABEL } from "../lib/format";
 import { Page, Card, Stat, Btn, Badge, Spinner, Empty, Progress, Select } from "../components/ui";
@@ -53,18 +53,11 @@ function PendingList({ items, empty }) {
 
 export function AdminDashboard() {
   const { school } = useAuth();
-  const [d, setD] = useState(null);
-  const [exams, setExams] = useState([]);
   const [examId, setExamId] = useState("");
-  const [subjects, setSubjects] = useState([]);
-  const [usage, setUsage] = useState(null);
-
-  useEffect(() => {
-    api.get("/exams").then(setExams);
-    api.get("/subjects").then(setSubjects);
-    api.get("/accounts/usage").then(setUsage);
-  }, []);
-  useEffect(() => { api.get(`/dashboard/summary${examId ? `?exam_id=${examId}` : ""}`).then(setD); }, [examId]);
+  const { data: d } = useQuery(`/dashboard/summary${examId ? `?exam_id=${examId}` : ""}`);
+  const exams = useQuery("/exams").data || [];
+  const subjects = useQuery("/subjects").data || [];
+  const usage = useQuery("/accounts/usage").data || null;
   if (!d) return <Spinner />;
 
   const c = d.counts;
@@ -145,9 +138,8 @@ export function AdminDashboard() {
 
 export function StaffDashboard() {
   const { user } = useAuth();
-  const [d, setD] = useState(null);
-  const [ov, setOv] = useState([]);
-  useEffect(() => { api.get("/dashboard/summary").then(setD); api.get("/analytics/overview?mine=1").then(setOv); }, []);
+  const { data: d } = useQuery("/dashboard/summary");
+  const ov = useQuery("/analytics/overview?mine=1").data || [];
   if (!d) return <Spinner />;
   const declined = ov.filter((r) => r.status === "declined").slice(0, 4);
   const improved = [...ov].filter((r) => r.status === "improved").sort((a, b) => b.change - a.change).slice(0, 4);
@@ -185,8 +177,7 @@ export function StaffDashboard() {
 
 export function StudentHome() {
   const { user } = useAuth();
-  const [d, setD] = useState(null);
-  useEffect(() => { api.get("/me/progress").then(setD); }, []);
+  const { data: d } = useQuery("/me/progress");
   if (!d) return <Spinner />;
   const ex = d.exams;
   const latest = ex[ex.length - 1];
