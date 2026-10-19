@@ -2,7 +2,7 @@ from flask import Blueprint, g, jsonify, request
 
 from app.extensions import db
 from app.models import (User, Grade, Stream, School, RemarkTemplate, AuditLog, Subject,
-                        SCHOOL_ADMIN, TEACHER, EDUCATOR, STUDENT)
+                        SCHOOL_ADMIN, TEACHER, EDUCATOR, STUDENT, iso)
 from app.utils.audit import log_action, serialize_logs
 from app.utils.auth import require, scoped
 from app.utils.helpers import body, parse_date, user_dict, class_maps
@@ -140,3 +140,16 @@ def promote():
     log_action(g.school_id, g.current_user.id, "STUDENTS_PROMOTED", f"{moved} promoted, {graduated} graduated")
     db.session.commit()
     return jsonify(moved=moved, graduated=graduated)
+
+
+@bp.get("/pulse")
+@require(relaxed=True)
+def pulse():
+    """A tiny 'has anything changed?' check. Screens refresh only when this token changes, so
+    the server is not asked for everything again every few seconds."""
+    q = db.session.query(db.func.count(AuditLog.id), db.func.max(AuditLog.created_at))
+    if g.school_id:
+        q = q.filter(AuditLog.school_id == g.school_id)
+    n, last = q.one()
+    stamp = last.isoformat() if hasattr(last, "isoformat") else str(last or "")
+    return jsonify(token=f"{n}:{stamp}")

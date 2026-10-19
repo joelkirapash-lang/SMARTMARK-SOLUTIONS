@@ -18,10 +18,10 @@ export default function CredentialsModal({ creds, title = "Sign-in details", onC
     return () => document.body.classList.remove("printing-slips");
   }, []);
 
-  const text = list.map((c) => `${c.name} (${ROLE_LABEL[c.role] || c.role})\nEmail: ${c.email}\nPassword: ${c.password}`).join("\n\n");
+  const text = list.map((c) => `${c.name} (${c.job_title || ROLE_LABEL[c.role] || c.role})\nEmail: ${c.email}\nPassword: ${c.password}`).join("\n\n");
   const copy = async () => { await navigator.clipboard.writeText(text); toast.success("Sign-in details copied."); };
   const csv = () => downloadCsv("sign-in-details.csv", [["Name", "Role", "Class", "Admission No", "Login email", "Temporary password"],
-    ...list.map((c) => [c.name, ROLE_LABEL[c.role] || c.role, c.class || "", c.admission_number || "", c.email, c.password])]);
+    ...list.map((c) => [c.name, c.job_title || ROLE_LABEL[c.role] || c.role, c.class || "", c.admission_number || "", c.email, c.password])]);
 
   return (
     <>
@@ -39,7 +39,7 @@ export default function CredentialsModal({ creds, title = "Sign-in details", onC
         <ul className="space-y-3">
           {list.map((c, i) => (
             <li key={c.id || i} className="rounded-xl ring-1 ring-slate-200 p-4">
-              <p className="font-semibold text-slate-900">{c.name} <span className="text-sm font-normal text-slate-500">· {ROLE_LABEL[c.role] || c.role}{c.class ? ` · ${c.class}` : ""}</span></p>
+              <p className="font-semibold text-slate-900">{c.name} <span className="text-sm font-normal text-slate-500">· {c.job_title || ROLE_LABEL[c.role] || c.role}{c.class ? ` · ${c.class}` : ""}</span></p>
               <dl className="mt-2 grid sm:grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <dt className="text-slate-500">Login email</dt><dd className="font-mono break-all select-all">{c.email}</dd>
                 <dt className="text-slate-500">Password</dt><dd className="font-mono font-semibold select-all">{c.password}</dd>
@@ -53,7 +53,7 @@ export default function CredentialsModal({ creds, title = "Sign-in details", onC
           {list.map((c, i) => (
             <div key={c.id || i} className="border-2 border-dashed border-slate-400 rounded-lg p-4 break-inside-avoid text-sm">
               <p className="font-bold text-base">{school?.name || "SMARTMARK SOLUTIONS"}</p>
-              <p className="mt-1">{c.name} · {ROLE_LABEL[c.role] || c.role}{c.class ? ` · ${c.class}` : ""}</p>
+              <p className="mt-1">{c.name} · {c.job_title || ROLE_LABEL[c.role] || c.role}{c.class ? ` · ${c.class}` : ""}</p>
               <p className="mt-2">Sign in at: <b>{origin}</b></p>
               <p>Email: <b className="font-mono">{c.email}</b></p>
               <p>Password: <b className="font-mono">{c.password}</b></p>

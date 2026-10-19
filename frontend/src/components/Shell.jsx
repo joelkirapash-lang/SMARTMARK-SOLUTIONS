@@ -166,7 +166,7 @@ export default function Shell() {
           <Avatar name={user.full_name} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{user.full_name}</p>
-            <p className="text-xs text-white/60">{ROLE_LABEL[user.role]}</p>
+            <p className="text-xs text-white/60">{user.job_title || ROLE_LABEL[user.role]}</p>
           </div>
           <button onClick={() => { logout(); nav("/login"); }} className="p-2 rounded-lg hover:bg-white/10" aria-label="Sign out" title="Sign out"><LogOut size={18} /></button>
         </div>

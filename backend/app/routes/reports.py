@@ -57,11 +57,16 @@ def build_card(school, student, exam):
     tier = tier_for(bands, average)
     best = max(scored)[1] if len(scored) > 1 else None
     weak = min(scored)[1] if len(scored) > 1 and min(scored)[0] != max(scored)[0] else None
+    head_name = school.head_teacher_name
+    if not head_name:  # fall back to the admin whose position is Head teacher
+        a = (User.query.filter(User.school_id == sid, User.role == SCHOOL_ADMIN, User.status == "ACTIVE",
+                               db.func.lower(User.job_title).like("head%")).order_by(User.created_at).first())
+        head_name = a.full_name() if a else None
     return {
         "school": {"name": school.name, "motto": school.motto, "crest_url": school.crest_url,
                    "address": school.address, "phone": school.contact_phone, "email": school.contact_email,
                    "footer": school.report_card_footer, "term": school.current_term,
-                   "head_teacher_name": school.head_teacher_name, "head_signature_url": school.head_signature_url,
+                   "head_teacher_name": head_name, "head_signature_url": school.head_signature_url,
                    "stamp_url": school.stamp_url, "next_term_begins": iso(school.next_term_begins)},
         "student": {"id": student.id, "name": student.full_name(), "admission_number": student.admission_number,
                     "upi": student.upi_number, "assessment_number": student.assessment_number,

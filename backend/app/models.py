@@ -166,6 +166,7 @@ class User(db.Model, Stamp):
     password_hash = db.Column(db.String(255), nullable=False)
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     status = db.Column(db.String(20), default="ACTIVE", nullable=False)  # ACTIVE | DISABLED
+    job_title = db.Column(db.String(80))  # e.g. Head teacher, Chairperson, Computer patron
     last_login_at = db.Column(db.DateTime(timezone=True))
     created_by_id = db.Column(db.String(36), db.ForeignKey("users.id"))
     # staff
@@ -193,7 +194,7 @@ class User(db.Model, Stamp):
             "first_name": self.first_name, "second_name": self.second_name,
             "other_name": self.other_name, "full_name": self.full_name(),
             "gender": self.gender, "smartmark_email": self.smartmark_email,
-            "status": self.status, "must_change_password": self.must_change_password,
+            "status": self.status, "job_title": self.job_title, "must_change_password": self.must_change_password,
             "last_login_at": iso(self.last_login_at), "created_at": iso(self.created_at),
             "employee_id": self.employee_id, "home_grade_id": self.home_grade_id,
             "home_stream_id": self.home_stream_id, "admission_number": self.admission_number,

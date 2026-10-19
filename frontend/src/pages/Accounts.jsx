@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { UserPlus, Upload, Pencil, KeyRound, Ban, CheckCircle2, Search, Download, Users } from "lucide-react";
-import { api, qs } from "../lib/api";
-import { useQuery } from "../lib/query";
+import { api, qs, patchCache } from "../lib/api";
+import { useQuery, optimistic } from "../lib/query";
 import { useToast } from "../context/Toast";
 import { fmtDateTime, downloadCsv } from "../lib/format";
 import { Page, Card, Btn, Input, Select, Badge, Modal, Empty, Spinner, Tabs, Progress, ErrorNote, Avatar } from "../components/ui";
@@ -146,7 +146,16 @@ export default function Accounts() {
   const rows = useQuery(`/accounts${qs({ role, q: dq, grade_id: role === "STUDENT" ? gradeId : "", stream_id: role === "STUDENT" ? streamId : "" })}`).data;
   const loadUsage = () => {}; const load = () => {}; // lists refresh themselves after every save
 
-  const after = (c) => { setForm(null); if (c) setCreds(c); load(); loadUsage(); };
+  const after = (c, u) => {
+    setForm(null);
+    if (!c) return;
+    setCreds(c);
+    if (u) { // show the new person straight away; the server then confirms
+      patchCache("/accounts", (list, key) => (key.includes(`role=${u.role}`) ? [u, ...list] : list));
+      const k = u.role === "STUDENT" ? "students" : "staff";
+      patchCache("/accounts/usage", (x) => ({ ...x, [k]: { ...x[k], used: x[k].used + 1 } }));
+    }
+  };
   const reset = async (u) => {
     if (!window.confirm(`Generate a new temporary password for ${u.full_name}?`)) return;
     try { setCreds((await api.post(`/accounts/${u.id}/reset-password`)).credentials); } catch (e) { toast.error(e.message); }
@@ -154,7 +163,7 @@ export default function Accounts() {
   const toggle = async (u) => {
     const on = u.status !== "ACTIVE";
     if (!on && !window.confirm(`Disable ${u.full_name}? They will not be able to sign in.`)) return;
-    try { await api.post(`/accounts/${u.id}/status`, { active: on }); toast.success(on ? "Account re-enabled." : "Account disabled."); load(); } catch (e) { toast.error(e.message); }
+    try { await optimistic(() => api.post(`/accounts/${u.id}/status`, { active: on }), [["/accounts", (list) => list.map((r) => (r.id === u.id ? { ...r, status: on ? "ACTIVE" : "DISABLED" } : r))]]); toast.success(on ? "Account re-enabled." : "Account disabled."); } catch (e) { toast.error(e.message); }
   };
   const u = usage && (role === "STUDENT" ? usage.students : usage.staff);
   const full = u && u.max !== null && u.used >= u.max;

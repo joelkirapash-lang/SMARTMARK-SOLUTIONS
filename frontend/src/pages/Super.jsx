@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2, CheckCircle2, PauseCircle, AlertTriangle, GraduationCap, Users, Plus, Eye, Pause, Play, Settings2, Search, KeyRound } from "lucide-react";
 import { api } from "../lib/api";
-import { useQuery } from "../lib/query";
+import { useQuery, optimistic } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/Toast";
 import { cn, fmtDate, ROLE_LABEL } from "../lib/format";
@@ -83,36 +83,70 @@ function PlanFields({ f, set }) {
   );
 }
 
+const TITLES = ["Head teacher", "Deputy head teacher", "Chairperson", "Board member", "Computer patron", "ICT officer", "Secretary", "Bursar", "Director"];
+
+function PositionPicker({ value, onChange, label = "Position" }) {
+  const [other, setOther] = useState(!!value && !TITLES.includes(value));
+  return (
+    <div className="space-y-2">
+      <Select label={label} value={other ? "__other" : value || ""} onChange={(e) => { const v = e.target.value; if (v === "__other") { setOther(true); onChange(""); } else { setOther(false); onChange(v); } }}>
+        <option value="">No position</option>
+        {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
+        <option value="__other">Other…</option>
+      </Select>
+      {other && <Input label="Position name" value={value} onChange={(e) => onChange(e.target.value)} placeholder="e.g. Board secretary" />}
+    </div>
+  );
+}
+
 function AdminsPanel({ school, onCreds }) {
   const toast = useToast();
-  const { data: admins } = useQuery(`/super/schools/${school.id}/users?role=SCHOOL_ADMIN`);
-  const [f, setF] = useState({ first_name: "", second_name: "" });
+  const listKey = `/super/schools/${school.id}/users`;
+  const { data: admins } = useQuery(`${listKey}?role=SCHOOL_ADMIN`);
+  const blank = { first_name: "", second_name: "", job_title: "" };
+  const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const add = async (e) => {
     e.preventDefault(); setBusy(true);
-    try { const r = await api.post(`/super/schools/${school.id}/admins`, f); setF({ first_name: "", second_name: "" }); onCreds(r.credentials); toast.success("Admin added."); }
+    try { const r = await api.post(`/super/schools/${school.id}/admins`, f); setF(blank); onCreds(r.credentials); toast.success("Admin added."); }
     catch (x) { toast.error(x.message); } finally { setBusy(false); }
   };
   const reset = async (a) => {
     if (!window.confirm(`Generate a new temporary password for ${a.full_name}?`)) return;
     try { onCreds((await api.post(`/super/users/${a.id}/reset-password`)).credentials); } catch (x) { toast.error(x.message); }
   };
-  const toggle = async (a) => { try { await api.post(`/super/users/${a.id}/status`, { active: a.status !== "ACTIVE" }); } catch (x) { toast.error(x.message); } };
+  const change = (a, patch) => (rows) => rows.map((x) => (x.id === a.id ? { ...x, ...patch } : x));
+  const toggle = async (a) => {
+    const on = a.status !== "ACTIVE";
+    try { await optimistic(() => api.post(`/super/users/${a.id}/status`, { active: on }), [[listKey, change(a, { status: on ? "ACTIVE" : "DISABLED" })]]); } catch (x) { toast.error(x.message); }
+  };
+  const retitle = async (a, title) => {
+    try { await optimistic(() => api.put(`/super/users/${a.id}`, { job_title: title }), [[listKey, change(a, { job_title: title || null })]]); } catch (x) { toast.error(x.message); }
+  };
   return (
     <div className="rounded-xl ring-1 ring-slate-200 p-4 space-y-3">
       <p className="font-display font-semibold">School admins <Badge tone="brand">{admins ? admins.length : "…"}</Badge></p>
-      <p className="text-xs text-slate-500">Every admin sees and can do exactly the same things. Add as many as the school needs.</p>
+      <p className="text-xs text-slate-500">Head teacher, chairperson, computer patron or anyone else you choose. Every admin sees and can do exactly the same things.</p>
       <ul className="divide-y divide-slate-100">
         {(admins || []).map((a) => (
-          <li key={a.id} className="py-2 flex items-center gap-3"><Avatar name={a.full_name} size={32} />
-            <div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{a.full_name} {a.status !== "ACTIVE" && <Badge tone="red">Disabled</Badge>}</p><p className="text-xs text-slate-500 truncate">{a.smartmark_email}</p></div>
+          <li key={a.id} className="py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2"><Avatar name={a.full_name} size={34} />
+            <div className="min-w-0 flex-1 basis-40"><p className="text-sm font-semibold truncate">{a.full_name} {a.status !== "ACTIVE" && <Badge tone="red">Disabled</Badge>}</p><p className="text-xs text-slate-500 truncate">{a.smartmark_email}</p></div>
+            <select aria-label={`Position of ${a.full_name}`} value={a.job_title || ""} onChange={(e) => retitle(a, e.target.value)}
+              className="rounded-lg ring-1 ring-slate-300 bg-surface text-sm px-2 py-1.5 max-w-[11rem]">
+              <option value="">No position</option>
+              {[...new Set([...TITLES, a.job_title].filter(Boolean))].map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
             <Btn size="sm" variant="ghost" icon={KeyRound} onClick={() => reset(a)} aria-label={`Reset password for ${a.full_name}`}><span className="sr-only">Reset</span></Btn>
             <Btn size="sm" variant="ghost" onClick={() => toggle(a)}>{a.status === "ACTIVE" ? "Disable" : "Enable"}</Btn></li>
         ))}
       </ul>
-      <form onSubmit={add} className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
-        <Input label="First name" required value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} />
-        <Input label="Second name" value={f.second_name} onChange={(e) => setF({ ...f, second_name: e.target.value })} />
+      <form onSubmit={add} className="space-y-3 rounded-xl bg-slate-50 p-3">
+        <p className="text-sm font-semibold">Add another admin</p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Input label="First name" required value={f.first_name} onChange={(e) => setF({ ...f, first_name: e.target.value })} />
+          <Input label="Second name" value={f.second_name} onChange={(e) => setF({ ...f, second_name: e.target.value })} />
+        </div>
+        <PositionPicker value={f.job_title} onChange={(v) => setF({ ...f, job_title: v })} />
         <Btn type="submit" loading={busy} icon={Plus}>Add admin</Btn>
       </form>
     </div>
@@ -130,6 +164,7 @@ export function Schools() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
+  const [adminsFor, setAdminsFor] = useState(null);
 
   const load = () => {};
   const set = (state, setter) => (k) => (e) => setter({ ...state, [k]: e.target.value });
@@ -184,7 +219,13 @@ export function Schools() {
                       <p className="text-xs text-slate-500">{s.plan_name || "No plan name"} · since {fmtDate(s.created_at)}</p></div>
                     <div className="flex flex-col items-end gap-1">{!s.is_active && <Badge tone="amber">Paused</Badge>}<Badge tone={tone}>{label}</Badge></div>
                   </div>
-                  <p className="text-sm text-slate-600">School admins: <b>{s.usage.admins}</b></p>
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1.5">School admins: <b>{s.usage.admins}</b></p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(s.admin_users || []).slice(0, 4).map((a) => <span key={a.id} className={cn("rounded-full text-xs font-medium px-2.5 py-1", a.status === "ACTIVE" ? "bg-brand-50 text-brandtext" : "bg-rose-50 text-rose-700 line-through")}>{a.full_name}{a.job_title ? ` · ${a.job_title}` : ""}</span>)}
+                      {(s.admin_users || []).length > 4 && <span className="rounded-full text-xs px-2.5 py-1 bg-slate-100 text-slate-600">+{s.admin_users.length - 4} more</span>}
+                    </div>
+                  </div>
                   {[["Learners", s.usage.students, s.max_students], ["Staff", s.usage.staff, s.max_staff]].map(([k, used, max]) => (
                     <div key={k}><div className="flex justify-between text-sm mb-1"><span className="text-slate-600">{k}</span><span className="font-semibold">{used}{max !== null ? ` / ${max}` : " · no limit"}</span></div>
                       <Progress value={used} max={max || used || 1} tone={max !== null && used >= max ? "red" : "brand"} /></div>
@@ -193,6 +234,7 @@ export function Schools() {
                   {!s.is_active && s.suspended_reason && <p className="text-xs rounded-lg bg-amber-50 text-amber-900 px-3 py-2">{s.suspended_reason}</p>}
                   <div className="flex flex-wrap gap-2 pt-1">
                     <Btn size="sm" variant="soft" icon={Settings2} onClick={() => { setErr(""); setReason(""); setManage({ ...s }); }}>Manage</Btn>
+                    <Btn size="sm" variant="accent" icon={Plus} onClick={() => setAdminsFor(s)}>Add admin</Btn>
                     <Btn size="sm" variant="outline" icon={Eye} onClick={() => enterAsAdmin(s)}>View as admin</Btn>
                     {s.is_active ? <Btn size="sm" variant="dangerSoft" icon={Pause} onClick={() => { setErr(""); setReason(""); setManage({ ...s }); }}>Pause</Btn>
                       : <Btn size="sm" variant="accent" icon={Play} onClick={() => resume(s)}>Resume</Btn>}
@@ -242,6 +284,11 @@ export function Schools() {
               ) : <Btn variant="accent" icon={Play} onClick={() => resume(manage)}>Resume access</Btn>}
             </div>
           </div>
+        </Modal>
+      )}
+      {adminsFor && (
+        <Modal title={`Admins at ${adminsFor.name}`} onClose={() => setAdminsFor(null)} wide footer={<Btn onClick={() => setAdminsFor(null)}>Done</Btn>}>
+          <AdminsPanel school={adminsFor} onCreds={setCreds} />
         </Modal>
       )}
       {creds && <CredentialsModal creds={creds} title="School administrator sign-in" onClose={() => setCreds(null)} />}

@@ -247,6 +247,49 @@ describe("layout, uploads, admins and live updates", () => {
   });
 });
 
+describe("speed and admin positions", () => {
+  it("each school card has its own Add admin button, with positions like Computer patron", async () => {
+    mount("/app/schools", W.super);
+    fireEvent.click(await screen.findByRole("button", { name: /^Add admin$/ }, { timeout: 15000 }));
+    const dlg = await screen.findByRole("dialog");
+    expect(within(dlg).getByText(/Head teacher, chairperson, computer patron/)).toBeTruthy();
+    fireEvent.change(within(dlg).getByLabelText(/^First name/), { target: { value: "Mary" } });
+    fireEvent.change(within(dlg).getByLabelText(/^Second name/), { target: { value: "Wanjiku" } });
+    fireEvent.change(within(dlg).getByLabelText("Position"), { target: { value: "Computer patron" } });
+    fireEvent.click(within(dlg).getByRole("button", { name: /Add admin/ }));
+    expect((await screen.findAllByText("Mary Wanjiku · Computer patron", {}, { timeout: 15000 })).length).toBeGreaterThan(0);   // shown on the school card
+    const admins = await call("GET", `/super/schools/${W.school.id}/users?role=SCHOOL_ADMIN`, null, W.super);
+    expect(admins.find((a) => a.first_name === "Mary").job_title).toBe("Computer patron");
+  });
+
+  it("publishing an exam shows the result on the screen straight away", async () => {
+    window.confirm = () => true;
+    mount("/app/exams", W.admin);
+    const card = (await screen.findByText("Midterm", {}, { timeout: 15000 })).closest("div.rounded-2xl");
+    fireEvent.click(within(card).getByRole("button", { name: /^Publish$/ }));
+    expect(await within(card).findByText("Published")).toBeTruthy();
+    fireEvent.click(within(card).getByRole("button", { name: /Unpublish/ }));
+    expect(await within(card).findByText("Open for marks")).toBeTruthy();
+  });
+
+  it("going back to a page you already visited shows it instantly, with no loading", async () => {
+    mount("/app/exams", W.admin);
+    await screen.findByText("Opener", {}, { timeout: 15000 });
+    fireEvent.click(screen.getByRole("link", { name: /Marklists/ }));
+    await heading(/Marklists/);
+    fireEvent.click(screen.getByRole("link", { name: /^Exams$/ }));
+    expect(screen.getByText("Opener")).toBeTruthy();
+    expect(screen.queryByText(/Loading/)).toBeNull();
+  });
+
+  it("changes made elsewhere show up on their own through the quiet background check", async () => {
+    mount("/app/exams", W.admin);
+    expect(await screen.findByText("Opener", {}, { timeout: 15000 })).toBeTruthy();
+    await call("POST", "/exams", { name: "Seen By Pulse" }, W.admin);
+    expect(await screen.findByText("Seen By Pulse", {}, { timeout: 30000 })).toBeTruthy();   // no refresh, no focus: the pulse noticed
+  });
+});
+
 describe("import and appearance", () => {
   it("import marks page opens for admin and for a teacher with only their own grades", async () => {
     mount("/app/import", W.admin); await heading(/Import marks/);

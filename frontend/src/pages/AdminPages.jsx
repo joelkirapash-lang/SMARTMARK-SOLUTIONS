@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Save, KeyRound, FileText, Pencil, Eye, EyeOff, ArrowRight, MessageSquareQuote } from "lucide-react";
 import { api } from "../lib/api";
-import { useQuery } from "../lib/query";
+import { useQuery, optimistic } from "../lib/query";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/Toast";
 import { cn, fmtDate, ROLE_LABEL } from "../lib/format";
@@ -99,9 +99,9 @@ export function Exams() {
   };
   const pub = async (e, on) => {
     if (on && !window.confirm(`Publish ${e.name}? Learners will be able to see their results, and teachers can no longer edit marks.`)) return;
-    await api.post(`/exams/${e.id}/publish`, { published: on }); toast.success(on ? "Exam published." : "Exam unpublished."); load();
+    try { await optimistic(() => api.post(`/exams/${e.id}/publish`, { published: on }), [["/exams", (rows) => rows.map((x) => (x.id === e.id ? { ...x, is_published: on } : x))]]); toast.success(on ? "Exam published." : "Exam unpublished."); } catch (x) { toast.error(x.message); }
   };
-  const del = async (e) => { if (!window.confirm(`Delete ${e.name}?`)) return; try { await api.del(`/exams/${e.id}`); load(); } catch (x) { toast.error(x.message); } };
+  const del = async (e) => { if (!window.confirm(`Delete ${e.name}?`)) return; try { await optimistic(() => api.del(`/exams/${e.id}`), [["/exams", (rows) => rows.filter((x) => x.id !== e.id)]]); } catch (x) { toast.error(x.message); } };
   return (
     <Page title="Exams" subtitle="Create an exam, set when marks are due, then publish when results are ready for learners and parents."
       actions={<Btn icon={Plus} onClick={() => { setError(""); setF({ ...blankExam }); }}>New exam</Btn>}>
@@ -185,14 +185,20 @@ export function Promote() {
 /* ---------------- Remarks bank ---------------- */
 export function Remarks() {
   const toast = useToast();
-  const [rows, setRows] = useState(null);
-  const [subjects, setSubjects] = useState([]);
+  const { data: rows } = useQuery("/remarks");
+  const subjects = useQuery("/subjects").data || [];
   const [f, setF] = useState({ text: "", subject_id: "", band_code: "" });
-  const load = useCallback(() => api.get("/remarks").then(setRows), []);
-  useEffect(() => { load(); api.get("/subjects").then(setSubjects); }, [load]);
   const add = async (e) => {
     e.preventDefault();
-    try { await api.post("/remarks", f); setF({ text: "", subject_id: f.subject_id, band_code: "" }); toast.success("Remark added."); load(); } catch (x) { toast.error(x.message); }
+    const draft = { ...f };
+    setF({ text: "", subject_id: draft.subject_id, band_code: "" });
+    try {
+      await optimistic(() => api.post("/remarks", draft), [["/remarks", (list) => [{ id: `tmp-${Date.now()}`, subject_id: draft.subject_id || null, band_code: null, text: draft.text }, ...list]]]);
+      toast.success("Remark added.");
+    } catch (x) { toast.error(x.message); setF(draft); }
+  };
+  const del = async (r) => {
+    try { await optimistic(() => api.del(`/remarks/${r.id}`), [["/remarks", (list) => list.filter((x) => x.id !== r.id)]]); } catch (x) { toast.error(x.message); }
   };
   const name = (id) => subjects.find((s) => s.id === id)?.name || "Any subject";
   return (
@@ -209,7 +215,7 @@ export function Remarks() {
           {!rows ? <Spinner /> : rows.length === 0 ? <Empty icon={MessageSquareQuote} title="No remarks yet" hint="Add common comments and teachers will see them as suggestions." /> : (
             <ul className="divide-y divide-slate-100">{rows.map((r) => (
               <li key={r.id} className="px-5 py-3 flex items-start justify-between gap-3"><div><p>{r.text}</p><Badge tone="brand" className="mt-1">{name(r.subject_id)}</Badge></div>
-                <button className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete remark" onClick={async () => { await api.del(`/remarks/${r.id}`); load(); }}><Trash2 size={16} /></button></li>))}</ul>
+                <button className="text-slate-400 hover:text-rose-600 p-1" aria-label="Delete remark" onClick={() => del(r)}><Trash2 size={16} /></button></li>))}</ul>
           )}
         </Card>
       </div>

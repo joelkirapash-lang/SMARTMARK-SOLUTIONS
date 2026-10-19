@@ -6,26 +6,57 @@ const SUPER_KEY = "sms_super_token";
 // Every screen that reads data re-fetches whenever this counter changes: after any save,
 // when you come back to the tab, when the phone reconnects, and every 20 seconds.
 export const queryCache = new Map();
-let epoch = 0;
-const listeners = new Set();
+let epoch = 0, cacheVersion = 0, lastToken = null;
+const listeners = new Set(), cacheListeners = new Set();
 export const getEpoch = () => epoch;
 export const subscribeEpoch = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 export const bumpEpoch = () => { epoch += 1; listeners.forEach((fn) => fn()); };
+export const getCacheVersion = () => cacheVersion;
+export const subscribeCache = (fn) => { cacheListeners.add(fn); return () => cacheListeners.delete(fn); };
+const bumpCache = () => { cacheVersion += 1; cacheListeners.forEach((fn) => fn()); };
+
+/** Change what screens show right now, before the server has answered. Returns an undo function. */
+export function patchCache(prefix, updater) {
+  const undo = [];
+  queryCache.forEach((hit, key) => {
+    if (key === prefix || key.startsWith(prefix + "?")) {
+      try { queryCache.set(key, { ...hit, data: updater(hit.data, key) }); undo.push([key, hit]); } catch { /* shape differs: skip */ }
+    }
+  });
+  bumpCache();
+  return () => { undo.forEach(([k, h]) => queryCache.set(k, h)); bumpCache(); };
+}
+
+// A tiny "has anything changed?" check every 8 seconds. Screens re-fetch only when it says yes,
+// so the server is not asked for everything again and again.
+async function pulse() {
+  const t = typeof localStorage !== "undefined" && localStorage.getItem(KEY);
+  if (!t || document.hidden) return;
+  try {
+    const r = await fetch(BASE + "/pulse", { headers: { Authorization: `Bearer ${t}` } });
+    if (!r.ok) return;
+    const { token } = await r.json();
+    if (lastToken !== null && token !== lastToken) bumpEpoch();
+    lastToken = token;
+  } catch { /* offline: try again next time */ }
+}
 if (typeof window !== "undefined") {
-  const tick = () => { if (!document.hidden && localStorage.getItem(KEY)) bumpEpoch(); };
-  document.addEventListener("visibilitychange", tick);
-  window.addEventListener("focus", tick);
-  window.addEventListener("online", tick);
-  setInterval(tick, 20000);
+  const wake = () => { if (!document.hidden && localStorage.getItem(KEY)) { bumpEpoch(); pulse(); } };
+  document.addEventListener("visibilitychange", wake);
+  window.addEventListener("focus", wake);
+  window.addEventListener("online", wake);
+  setInterval(pulse, 8000);
+  pulse();
 }
 
 const ORIGIN = BASE.startsWith("http") ? BASE.replace(/\/api\/?$/, "") : "";
+export const API_ORIGIN = ORIGIN;
 /** Uploaded images are stored as /api/files/...; when the API lives on another domain, point at it. */
 export const assetUrl = (u) => (u && u.startsWith("/api/") ? ORIGIN + u : u || "");
 
 export const tokens = {
   get: () => localStorage.getItem(KEY),
-  set: (t) => { localStorage.setItem(KEY, t); queryCache.clear(); bumpEpoch(); },
+  set: (t) => { localStorage.setItem(KEY, t); queryCache.clear(); lastToken = null; bumpEpoch(); pulse(); },
   getSuper: () => localStorage.getItem(SUPER_KEY),
   setSuper: (t) => localStorage.setItem(SUPER_KEY, t),
   clearSuper: () => localStorage.removeItem(SUPER_KEY),
@@ -33,6 +64,7 @@ export const tokens = {
     localStorage.removeItem(KEY);
     localStorage.removeItem(SUPER_KEY);
     queryCache.clear();
+    lastToken = null;
     bumpEpoch();
   },
 };
@@ -67,7 +99,7 @@ async function request(path, { method = "GET", body, form } = {}) {
     if (err.code === "PASSWORD_CHANGE_REQUIRED") emit("sms:pwchange");
     throw err;
   }
-  if (method !== "GET") bumpEpoch();
+  if (method !== "GET") { lastToken = null; bumpEpoch(); }
   return data;
 }
 

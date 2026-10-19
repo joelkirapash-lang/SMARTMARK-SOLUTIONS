@@ -75,13 +75,22 @@ including the parent links.
 
 ### Several admins per school
 
-Super Admin > Schools > Manage > School admins. Add as many as a school needs. They all have identical access and see the same data.
-A school always keeps at least one active admin. The Overview page lists every school created with its number of admins.
+Super Admin > Schools. Every school card lists its admins with their positions and has its own **Add admin** button.
+Give each admin a position (Head teacher, Deputy head teacher, Chairperson, Board member, Computer patron, ICT officer,
+Secretary, Bursar, Director, or any other name you type). The position can be changed later from the same panel.
+All admins of a school have identical access and see the same data. A school always keeps at least one active admin.
+If no head teacher's name is typed in Settings, the admin whose position is Head teacher is used on report cards.
+The Overview page lists every school created with its number of admins.
 
-### Live updates
+### Speed and live updates
 
-Screens show what they already know instantly and refresh quietly: after every save, when you return to the tab, when a phone
-reconnects, and every 20 seconds. Pages are loaded on demand and fetched in the background after sign-in.
+- Pages download on demand (a small first download) and the screens you are likely to open next are fetched quietly after sign-in.
+- Screens show what they already know instantly, then refresh in the background.
+- Buttons that add, remove, publish or disable something update the screen at once and are confirmed by the server a moment later.
+  If the server refuses, the change is undone and the reason is shown.
+- A tiny "has anything changed?" check runs every 8 seconds. Screens re-fetch only when it says yes, plus after your own
+  saves and when you return to the tab. This keeps the (single-worker) free server free for your clicks.
+- Static files are cached for a year (`frontend/public/_headers`), so repeat visits start almost instantly.
 
 ### Dark and light mode
 
@@ -99,10 +108,10 @@ Printed report cards and marklists are always in light colours.
 ## Tests
 
 ```bash
-# backend: 22 tests (tenant isolation, roles, limits, suspension, view-as, marks import, time handling...)
+# backend: 24 tests (tenant isolation, roles, limits, suspension, view-as, marks import, time handling...)
 cd backend && source venv/bin/activate && python -m pytest -q
 
-# frontend: 48 full-stack tests that render every screen for every role against a live backend
+# frontend: 52 full-stack tests that render every screen for every role against a live backend
 cd backend
 export DATABASE_URL=sqlite:////tmp/e2e.db RATELIMIT_ENABLED=0 PORT=5055
 rm -f /tmp/e2e.db && flask db upgrade

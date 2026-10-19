@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import { prefetch } from "./lib/query";
 import Shell, { SuspendedScreen } from "./components/Shell";
 import { Spinner } from "./components/ui";
 import Login from "./pages/Login";
@@ -23,6 +24,14 @@ const AdminDashboard = named("dash", "AdminDashboard"), StaffDashboard = named("
 const Access = named("admin", "Access"), Exams = named("admin", "Exams"), Promote = named("admin", "Promote"), Remarks = named("admin", "Remarks"), Activity = named("admin", "Activity");
 const Accounts = whole("accounts"), Academics = whole("academics"), Settings = whole("settings"), MarksEntry = whole("marks"), MarksImport = whole("import"),
   Marklist = whole("marklist"), Trends = whole("trends"), ReportCards = whole("cards"), Students = whole("students"), PublicReportCard = whole("public");
+
+const PREFETCH = {
+  SCHOOL_ADMIN: ["/dashboard/summary", "/exams", "/grades", "/subjects", "/accounts/usage", "/accounts?role=STUDENT", "/accounts?role=TEACHER", "/school", "/performance-bands", "/activity"],
+  TEACHER: ["/dashboard/summary", "/analytics/overview?mine=1", "/exams", "/grades", "/subjects", "/me/assignments", "/students"],
+  EDUCATOR: ["/dashboard/summary", "/analytics/overview?mine=1", "/exams", "/grades", "/subjects", "/me/assignments", "/students"],
+  STUDENT: ["/me/progress", "/exams"],
+  SUPER_ADMIN: ["/super/stats", "/super/schools", "/super/activity"],
+};
 
 function Gate({ children, bare }) {
   const { user, loading, suspended, impersonating } = useAuth();
@@ -55,7 +64,7 @@ export default function App() {
   const { user } = useAuth();
   useEffect(() => {
     if (!user) return;
-    const run = () => Object.values(loaders).forEach((l) => l().catch(() => {}));
+    const run = () => { Object.values(loaders).forEach((l) => l().catch(() => {})); prefetch(PREFETCH[user.role] || []); };
     const id = (window.requestIdleCallback || ((f) => setTimeout(f, 800)))(run);
     return () => (window.cancelIdleCallback || clearTimeout)(id);
   }, [user?.id]);

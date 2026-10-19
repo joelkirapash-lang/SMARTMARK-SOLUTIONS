@@ -32,11 +32,22 @@ def _counts(school_ids):
     return out
 
 
-def _school_row(s, counts):
+def _admin_map(ids):
+    out = defaultdict(list)
+    if not ids:
+        return out
+    for u in User.query.filter(User.school_id.in_(ids), User.role == SCHOOL_ADMIN).order_by(User.created_at):
+        out[u.school_id].append({"id": u.id, "full_name": u.full_name(), "job_title": u.job_title,
+                                 "status": u.status, "smartmark_email": u.smartmark_email})
+    return out
+
+
+def _school_row(s, counts, admin_map=None):
     d = s.to_dict(internal=True)
     c = counts[s.id]
     d["usage"] = {"students": c["students"], "staff": c["teachers"] + c["educators"],
                   "teachers": c["teachers"], "educators": c["educators"], "admins": c["admins"]}
+    d["admin_users"] = (admin_map or {}).get(s.id, [])
     return d
 
 
@@ -74,7 +85,8 @@ def stats():
 def list_schools():
     schools = School.query.order_by(School.created_at.desc()).all()
     counts = _counts([s.id for s in schools])
-    return jsonify([_school_row(s, counts) for s in schools])
+    admins = _admin_map([s.id for s in schools])
+    return jsonify([_school_row(s, counts, admins) for s in schools])
 
 
 def _apply_plan(s, d):
@@ -132,7 +144,7 @@ def create_school():
     db.session.add(admin)
     log_action(school.id, g.current_user.id, "SCHOOL_CREATED", f"{name}")
     db.session.commit()
-    return jsonify(school=_school_row(school, _counts([school.id])),
+    return jsonify(school=_school_row(school, _counts([school.id]), _admin_map([school.id])),
                    credentials={"name": admin.full_name(), "email": email, "password": pw, "role": SCHOOL_ADMIN}), 201
 
 
@@ -148,7 +160,7 @@ def update_school(sid):
         return jsonify(error=str(e)), 400
     log_action(s.id, g.current_user.id, "SCHOOL_UPDATED", s.name)
     db.session.commit()
-    return jsonify(_school_row(s, _counts([s.id])))
+    return jsonify(_school_row(s, _counts([s.id]), _admin_map([s.id])))
 
 
 @bp.post("/schools/<sid>/suspend")
@@ -161,7 +173,7 @@ def suspend(sid):
     s.is_active, s.suspended_reason, s.suspended_at = False, reason[:500], utcnow()
     log_action(s.id, g.current_user.id, "SCHOOL_SUSPENDED", f"{s.name}: {reason}")
     db.session.commit()
-    return jsonify(_school_row(s, _counts([s.id])))
+    return jsonify(_school_row(s, _counts([s.id]), _admin_map([s.id])))
 
 
 @bp.post("/schools/<sid>/resume")
@@ -173,7 +185,7 @@ def resume(sid):
     s.is_active, s.suspended_reason, s.suspended_at = True, None, None
     log_action(s.id, g.current_user.id, "SCHOOL_RESUMED", s.name)
     db.session.commit()
-    return jsonify(_school_row(s, _counts([s.id])))
+    return jsonify(_school_row(s, _counts([s.id]), _admin_map([s.id])))
 
 
 @bp.get("/schools/<sid>/users")
@@ -203,7 +215,8 @@ def reset_password(uid):
     u.password_hash, u.must_change_password = hash_password(pw), True
     log_action(u.school_id, g.current_user.id, "PASSWORD_RESET", u.full_name())
     db.session.commit()
-    return jsonify(credentials={"name": u.full_name(), "email": u.smartmark_email, "password": pw, "role": u.role})
+    return jsonify(credentials={"name": u.full_name(), "email": u.smartmark_email, "password": pw, "role": u.role,
+                                "job_title": u.job_title})
 
 
 @bp.post("/impersonate/<uid>")
@@ -243,13 +256,15 @@ def add_admin(sid):
     email = generate_login_email(s.slug, first, second, SCHOOL_ADMIN)
     pw = generate_temp_password()
     admin = User(school_id=s.id, role=SCHOOL_ADMIN, first_name=first, second_name=second or None,
-                 phone_number=(d.get("phone") or None), smartmark_email=email, password_hash=hash_password(pw),
+                 phone_number=(d.get("phone") or None), job_title=(d.get("job_title") or "").strip()[:80] or None,
+                 smartmark_email=email, password_hash=hash_password(pw),
                  must_change_password=True, created_by_id=g.current_user.id)
     db.session.add(admin)
     log_action(s.id, g.current_user.id, "ACCOUNT_CREATED", f"School admin account for {admin.full_name()}")
     db.session.commit()
     n = User.query.filter_by(school_id=s.id, role=SCHOOL_ADMIN).count()
-    return jsonify(credentials={"name": admin.full_name(), "email": email, "password": pw, "role": SCHOOL_ADMIN}, admins=n), 201
+    return jsonify(credentials={"name": admin.full_name(), "email": email, "password": pw, "role": SCHOOL_ADMIN,
+                                "job_title": admin.job_title}, admins=n), 201
 
 
 @bp.post("/users/<uid>/status")
@@ -266,5 +281,26 @@ def set_admin_status(uid):
             return jsonify(error="A school must keep at least one active admin."), 400
     u.status = "ACTIVE" if active else "DISABLED"
     log_action(u.school_id, g.current_user.id, "ACCOUNT_ENABLED" if active else "ACCOUNT_DISABLED", u.full_name())
+    db.session.commit()
+    return jsonify(u.to_dict(full=False))
+
+
+@bp.put("/users/<uid>")
+@require(SA)
+def update_admin(uid):
+    """Change an admin's name or position (head teacher, chairperson, computer patron ...)."""
+    u = db.session.get(User, uid)
+    if u is None or u.role != SCHOOL_ADMIN:
+        return jsonify(error="Admin not found."), 404
+    d = body()
+    if "first_name" in d:
+        if not (d["first_name"] or "").strip():
+            return jsonify(error="The first name cannot be empty."), 400
+        u.first_name = d["first_name"].strip()
+    if "second_name" in d:
+        u.second_name = (d["second_name"] or "").strip() or None
+    if "job_title" in d:
+        u.job_title = (d["job_title"] or "").strip()[:80] or None
+    log_action(u.school_id, g.current_user.id, "ACCOUNT_UPDATED", u.full_name())
     db.session.commit()
     return jsonify(u.to_dict(full=False))
